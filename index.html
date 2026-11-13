@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arcade Cloud - 多游戏云端平台</title>
+  <title>Arcade Cloud - クラウドゲームプラットフォーム</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -17,10 +17,10 @@
       --green: #4ade80;
       --danger: #ef4444;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Hiragino Kaku Gothic ProN", "Meiryo", system-ui, -apple-system, sans-serif; }
     body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
-    /* 顶部全局导航栏 */
+    /* 上部グローバルナビゲーションバー */
     .navbar {
       background: var(--nav-bg);
       border-bottom: 1px solid #1e293b;
@@ -51,26 +51,26 @@
     .nav-btn.active { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
     .user-area { display: flex; align-items: center; gap: 12px; }
 
-    /* 通用按钮与表单 */
+    /* 共通ボタン・フォーム */
     button.primary { background: var(--accent); color: #0f172a; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     button.secondary { background: var(--hover); color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     button.danger { background: var(--danger); color: white; border: none; padding: 7px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     button:hover { opacity: 0.9; }
 
-    .auth-box { max-width: 400px; margin: 60px auto; width: 90%; background: var(--card); padding: 28px; border-radius: 12px; }
+    .auth-box { max-width: 420px; margin: 60px auto; width: 90%; background: var(--card); padding: 28px; border-radius: 12px; }
     .form-group { margin-bottom: 16px; }
     label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: var(--muted); }
     input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
     .msg { margin-top: 12px; font-size: 0.85rem; color: #fbbf24; min-height: 20px; }
 
-    /* 主体三栏布局：左侧菜单 + 中间主视图 + 右侧排行榜 */
+    /* メイン3カラムレイアウト：左メニュー + 中央ステージ + 右ランキング */
     .main-layout {
       width: 100%;
       max-width: 1200px;
       margin: 24px auto;
       padding: 0 20px;
       display: grid;
-      grid-template-columns: 220px 1fr 290px;
+      grid-template-columns: 230px 1fr 290px;
       gap: 20px;
       align-items: start;
     }
@@ -78,8 +78,8 @@
 
     .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
 
-    /* 左侧游戏菜单栏 */
-    .sidebar-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 12px; padding-left: 8px; }
+    /* 左側ゲームメニュー */
+    .sidebar-title { font-size: 0.8rem; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 12px; padding-left: 8px; }
     .menu-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
     .menu-item {
       display: flex;
@@ -95,14 +95,14 @@
     .menu-item:hover { background: var(--hover); color: var(--text); }
     .menu-item.active { background: var(--accent); color: #0f172a; }
 
-    /* 游戏舞台区域 */
+    /* ゲーム画面エリア */
     .game-stage { display: flex; flex-direction: column; align-items: center; }
     .stage-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #334155; }
     .stats-bar { display: flex; gap: 28px; margin-bottom: 16px; font-size: 1.05rem; }
     canvas { background: #020617; border: 2px solid #334155; border-radius: 6px; }
     .controls-hint { font-size: 0.85rem; color: var(--muted); margin-top: 14px; text-align: center; }
 
-    /* 排行榜 & 个人中心 */
+    /* ランキング & マイページ */
     .rank-list { list-style: none; margin-top: 12px; }
     .rank-item { display: flex; justify-content: space-between; padding: 10px 6px; border-bottom: 1px solid #334155; font-size: 0.92rem; }
     .rank-item:first-child { color: #fbbf24; font-weight: bold; }
@@ -113,119 +113,119 @@
 </head>
 <body>
 
-  <!-- 顶部导航栏 -->
+  <!-- 上部ナビゲーションバー -->
   <nav class="navbar">
     <div class="nav-left">
       <div class="brand">🎮 Arcade Cloud</div>
       <div id="top-nav-links" class="nav-links hidden">
-        <button class="nav-btn active" id="nav-games" onclick="switchTopTab('games')">🕹️ 游戏大厅</button>
-        <button class="nav-btn" id="nav-profile" onclick="switchTopTab('profile')">👤 个人中心</button>
-        <button class="nav-btn" id="nav-about" onclick="switchTopTab('about')">📖 平台说明</button>
+        <button class="nav-btn active" id="nav-games" onclick="switchTopTab('games')">🕹️ ゲームロビー</button>
+        <button class="nav-btn" id="nav-profile" onclick="switchTopTab('profile')">👤 マイページ</button>
+        <button class="nav-btn" id="nav-about" onclick="switchTopTab('about')">📖 システム概要</button>
       </div>
     </div>
     <div id="user-bar" class="user-area hidden">
       <span id="user-display" style="color: var(--muted); font-size: 0.95rem;"></span>
-      <button class="danger" onclick="handleLogout()">退出登录</button>
+      <button class="danger" onclick="handleLogout()">ログアウト</button>
     </div>
   </nav>
 
-  <!-- 登录/注册面板 -->
+  <!-- ログイン / 新規登録パネル -->
   <div id="auth-view" class="auth-box">
-    <h2 style="margin-bottom: 18px;">玩家登录 / 注册</h2>
+    <h2 style="margin-bottom: 18px;">ログイン / 新規アカウント登録</h2>
     <div class="form-group">
-      <label>玩家昵称（注册时填写）</label>
-      <input type="text" id="username-input" placeholder="例如: ri">
+      <label>プレイヤー名（新規登録時のみ入力）</label>
+      <input type="text" id="username-input" placeholder="例: ri">
     </div>
     <div class="form-group">
-      <label>电子邮箱</label>
+      <label>メールアドレス</label>
       <input type="email" id="email-input" placeholder="player@example.com">
     </div>
     <div class="form-group">
-      <label>密码（至少 6 位）</label>
+      <label>パスワード（6文字以上）</label>
       <input type="password" id="password-input" placeholder="••••••">
     </div>
     <div style="display: flex; gap: 10px;">
-      <button class="primary" onclick="handleLogin()" style="flex: 1;">登录</button>
-      <button class="secondary" onclick="handleSignUp()" style="flex: 1;">注册新账号</button>
+      <button class="primary" onclick="handleLogin()" style="flex: 1;">ログイン</button>
+      <button class="secondary" onclick="handleSignUp()" style="flex: 1;">新規登録</button>
     </div>
     <div id="auth-msg" class="msg"></div>
   </div>
 
-  <!-- 登录后主平台视图 -->
+  <!-- ログイン後のメイン画面 -->
   <div id="platform-view" class="main-layout hidden">
     
-    <!-- 左侧：游戏菜单栏 -->
+    <!-- 左側：ゲーム選択メニュー -->
     <aside class="card">
-      <div class="sidebar-title">游戏列表 (2款)</div>
+      <div class="sidebar-title">ゲーム一覧 (全2タイトル)</div>
       <ul class="menu-list">
         <li class="menu-item active" id="menu-tetris" onclick="selectGame('tetris')">
-          <span>🧱</span> <span>经典俄罗斯方块</span>
+          <span>🧱</span> <span>テトリス (Tetris)</span>
         </li>
         <li class="menu-item" id="menu-snake" onclick="selectGame('snake')">
-          <span>🐍</span> <span>霓虹贪吃蛇</span>
+          <span>🐍</span> <span>スネークゲーム (Snake)</span>
         </li>
       </ul>
     </aside>
 
-    <!-- 中间：动态内容区（游戏舞台 / 个人中心 / 说明） -->
+    <!-- 中央：動的コンテンツエリア -->
     <main class="card">
-      <!-- 1. 游戏游玩区 -->
+      <!-- 1. ゲームプレイ画面 -->
       <div id="tab-games" class="game-stage">
         <div class="stage-header">
-          <h2 id="current-game-title">🧱 经典俄罗斯方块</h2>
-          <button class="primary" id="start-btn" onclick="startCurrentGame()">开始游戏</button>
+          <h2 id="current-game-title">🧱 テトリス (Tetris)</h2>
+          <button class="primary" id="start-btn" onclick="startCurrentGame()">ゲーム開始</button>
         </div>
         <div class="stats-bar">
-          <span>当前得分: <strong id="score-val" style="color: var(--accent);">0</strong></span>
-          <span>本游戏最高: <strong id="best-val" style="color: var(--green);">0</strong></span>
+          <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
+          <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
         </div>
 
-        <!-- 俄罗斯方块画布 -->
+        <!-- テトリス描画キャンバス -->
         <canvas id="tetris-canvas" width="240" height="400"></canvas>
-        <!-- 贪吃蛇画布 -->
+        <!-- スネーク描画キャンバス -->
         <canvas id="snake-canvas" width="360" height="360" class="hidden"></canvas>
 
         <div id="controls-hint" class="controls-hint">
-          操作说明：<strong>← →</strong> 左右移动 | <strong>↑</strong> 旋转方块 | <strong>↓</strong> 加速下落
+          操作方法：<strong>← →</strong> 左右移動 ｜ <strong>↑</strong> 回転 ｜ <strong>↓</strong> 高速落下
         </div>
       </div>
 
-      <!-- 2. 个人中心区 -->
+      <!-- 2. マイページ（戦績） -->
       <div id="tab-profile" class="hidden">
-        <h2>👤 个人战绩中心</h2>
+        <h2>👤 マイページ・戦績一覧</h2>
         <p style="color: var(--muted); margin-top: 6px;" id="profile-email"></p>
         <div class="profile-grid">
           <div class="stat-box">
-            <div style="color: var(--muted); font-size: 0.9rem;">🧱 俄罗斯方块最高分</div>
-            <div style="font-size: 1.8rem; font-weight: bold; color: var(--accent); margin-top: 6px;" id="profile-tetris-best">0 分</div>
+            <div style="color: var(--muted); font-size: 0.9rem;">🧱 テトリス 自己ベスト</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: var(--accent); margin-top: 6px;" id="profile-tetris-best">0 点</div>
           </div>
           <div class="stat-box">
-            <div style="color: var(--muted); font-size: 0.9rem;">🐍 霓虹贪吃蛇最高分</div>
-            <div style="font-size: 1.8rem; font-weight: bold; color: var(--green); margin-top: 6px;" id="profile-snake-best">0 分</div>
+            <div style="color: var(--muted); font-size: 0.9rem;">🐍 スネークゲーム 自己ベスト</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: var(--green); margin-top: 6px;" id="profile-snake-best">0 点</div>
           </div>
         </div>
       </div>
 
-      <!-- 3. 平台说明区 -->
+      <!-- 3. システム概要 -->
       <div id="tab-about" class="hidden">
-        <h2>📖 平台架构说明</h2>
-        <p style="color: var(--muted); line-height: 1.7; margin-top: 12px;">
-          本平台采用前后端分离无服务器架构（Serverless）：<br>
-          • <strong>前端托管</strong>：GitHub Pages 静态部署<br>
-          • <strong>用户认证与云数据库</strong>：Supabase Auth + PostgreSQL<br>
-          • <strong>扩展规范</strong>：支持多款 HTML5 Canvas 游戏共用统一账号体系与云端实时排行榜。
+        <h2>📖 システム構成概要</h2>
+        <p style="color: var(--muted); line-height: 1.8; margin-top: 12px;">
+          本プラットフォームはサーバーレス構成（Serverless）で構築されています：<br>
+          • <strong>フロントエンド配信</strong>：GitHub Pages による静的ホスティング<br>
+          • <strong>認証・クラウドDB</strong>：Supabase Auth + PostgreSQL<br>
+          • <strong>拡張性</strong>：HTML5 Canvas 製のミニゲームを追加し、共通アカウントとリアルタイムランキングを共有可能。
         </p>
       </div>
     </main>
 
-    <!-- 右侧：当前游戏云端排行榜 -->
+    <!-- 右側：クラウドランキング -->
     <aside class="card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 id="rank-title">🏆 方块排行榜</h3>
-        <button class="secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="loadLeaderboard()">刷新</button>
+        <h3 id="rank-title">🏆 テトリス ランキング</h3>
+        <button class="secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="loadLeaderboard()">更新</button>
       </div>
       <ul id="rank-list" class="rank-list">
-        <li class="rank-item">加载中...</li>
+        <li class="rank-item">読み込み中...</li>
       </ul>
     </aside>
 
@@ -233,17 +233,17 @@
 
   <script>
     // ==========================================
-    // 1. Supabase 初始化（已配置你的专属项目参数）
+    // 1. Supabase 初期化
     // ==========================================
     const SUPABASE_URL = 'https://tijekdtlvaukoftmwmip.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_gSiLVFW65_xnHw_u1Hv-TQ_1tF-orL0';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
-    let activeGame = 'tetris'; // 'tetris' 或 'snake'
+    let activeGame = 'tetris'; // 'tetris' または 'snake'
 
     // ==========================================
-    // 2. 用户认证逻辑
+    // 2. ユーザー認証ロジック
     // ==========================================
     async function checkSession() {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -260,14 +260,14 @@
       const msgEl = document.getElementById('auth-msg');
 
       if (!email || password.length < 6) {
-        msgEl.textContent = '请输入有效邮箱和至少6位密码';
+        msgEl.textContent = '有効なメールアドレスと6文字以上のパスワードを入力してください。';
         return;
       }
-      msgEl.textContent = '正在注册...';
+      msgEl.textContent = 'アカウントを作成中...';
       const { data, error } = await supabaseClient.auth.signUp({
         email, password, options: { data: { display_name: username } }
       });
-      if (error) msgEl.textContent = '注册失败: ' + error.message;
+      if (error) msgEl.textContent = '登録エラー: ' + error.message;
       else { currentUser = data.user; showPlatform(); }
     }
 
@@ -275,9 +275,9 @@
       const email = document.getElementById('email-input').value.trim();
       const password = document.getElementById('password-input').value.trim();
       const msgEl = document.getElementById('auth-msg');
-      msgEl.textContent = '正在登录...';
+      msgEl.textContent = 'ログイン中...';
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) msgEl.textContent = '登录失败: ' + error.message;
+      if (error) msgEl.textContent = 'ログインエラー: ' + error.message;
       else { currentUser = data.user; showPlatform(); }
     }
 
@@ -293,8 +293,8 @@
 
     function showPlatform() {
       const displayName = currentUser.user_metadata?.display_name || currentUser.email;
-      document.getElementById('user-display').textContent = `你好, ${displayName}`;
-      document.getElementById('profile-email').textContent = `账号邮箱：${currentUser.email} | 昵称：${displayName}`;
+      document.getElementById('user-display').textContent = `ようこそ、${displayName} さん`;
+      document.getElementById('profile-email').textContent = `メールアドレス：${currentUser.email} ｜ プレイヤー名：${displayName}`;
       document.getElementById('auth-view').classList.add('hidden');
       document.getElementById('platform-view').classList.remove('hidden');
       document.getElementById('user-bar').classList.remove('hidden');
@@ -303,7 +303,7 @@
     }
 
     // ==========================================
-    // 3. 顶部导航栏与左侧游戏菜单切换
+    // 3. ナビゲーション・メニュー切り替え
     // ==========================================
     function switchTopTab(tab) {
       ['games', 'profile', 'about'].forEach(t => {
@@ -318,25 +318,23 @@
       activeGame = game;
       switchTopTab('games');
 
-      // 更新左侧菜单高亮
       document.getElementById('menu-tetris').classList.toggle('active', game === 'tetris');
       document.getElementById('menu-snake').classList.toggle('active', game === 'snake');
 
-      // 切换画布与提示
       document.getElementById('tetris-canvas').classList.toggle('hidden', game !== 'tetris');
       document.getElementById('snake-canvas').classList.toggle('hidden', game !== 'snake');
       document.getElementById('score-val').textContent = '0';
-      document.getElementById('start-btn').textContent = '开始游戏';
+      document.getElementById('start-btn').textContent = 'ゲーム開始';
 
       if (game === 'tetris') {
-        document.getElementById('current-game-title').textContent = '🧱 经典俄罗斯方块';
-        document.getElementById('rank-title').textContent = '🏆 方块排行榜';
-        document.getElementById('controls-hint').innerHTML = '操作说明：<strong>← →</strong> 左右移动 | <strong>↑</strong> 旋转方块 | <strong>↓</strong> 加速下落';
+        document.getElementById('current-game-title').textContent = '🧱 テトリス (Tetris)';
+        document.getElementById('rank-title').textContent = '🏆 テトリス ランキング';
+        document.getElementById('controls-hint').innerHTML = '操作方法：<strong>← →</strong> 左右移動 ｜ <strong>↑</strong> 回転 ｜ <strong>↓</strong> 高速落下';
         drawTetris();
       } else {
-        document.getElementById('current-game-title').textContent = '🐍 霓虹贪吃蛇';
-        document.getElementById('rank-title').textContent = '🏆 贪吃蛇排行榜';
-        document.getElementById('controls-hint').innerHTML = '操作说明：使用方向键 <strong>↑ ↓ ← →</strong> 控制蛇的移动方向，吃到红果子加 10 分';
+        document.getElementById('current-game-title').textContent = '🐍 スネークゲーム (Snake)';
+        document.getElementById('rank-title').textContent = '🏆 スネーク ランキング';
+        document.getElementById('controls-hint').innerHTML = '操作方法：矢印キー <strong>↑ ↓ ← →</strong> で移動（赤いエサを食べると +10 点）';
         drawSnakeIdle();
       }
       loadLeaderboard();
@@ -355,7 +353,7 @@
     }
 
     // ==========================================
-    // 4. 云端成绩上传与排行榜查询
+    // 4. クラウドスコア保存 & ランキング取得
     // ==========================================
     async function saveScoreToCloud(gameName, finalScore) {
       if (!currentUser || finalScore <= 0) return;
@@ -383,22 +381,21 @@
         .limit(10);
 
       if (error) {
-        listEl.innerHTML = `<li class="rank-item">加载失败（请检查SQL字段）</li>`;
+        listEl.innerHTML = `<li class="rank-item">読み込みエラー</li>`;
         return;
       }
 
       if (!data || data.length === 0) {
-        listEl.innerHTML = `<li class="rank-item" style="color:var(--muted);">暂无记录，快来抢占榜首！</li>`;
+        listEl.innerHTML = `<li class="rank-item" style="color:var(--muted);">まだ記録がありません。1位を目指そう！</li>`;
       } else {
         listEl.innerHTML = data.map((row, idx) => `
           <li class="rank-item">
             <span>#${idx + 1} ${escapeHtml(row.username)}</span>
-            <strong>${row.score} 分</strong>
+            <strong>${row.score} 点</strong>
           </li>
         `).join('');
       }
 
-      // 更新当前游戏个人最高分
       if (currentUser) {
         const { data: myData } = await supabaseClient
           .from('tetris_scores')
@@ -422,7 +419,7 @@
           .order('score', { ascending: false })
           .limit(1);
         const best = (data && data.length > 0) ? data[0].score : 0;
-        document.getElementById(`profile-${g}-best`).textContent = `${best} 分`;
+        document.getElementById(`profile-${g}-best`).textContent = `${best} 点`;
       }
     }
 
@@ -431,7 +428,7 @@
     }
 
     // ==========================================
-    // 5. 游戏 A：经典俄罗斯方块引擎
+    // 5. ゲーム A：テトリス (Tetris)
     // ==========================================
     const tCanvas = document.getElementById('tetris-canvas');
     const tCtx = tCanvas.getContext('2d');
@@ -495,8 +492,8 @@
       player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
       if (collide(arena, player)) {
         isTetrisOver = true;
-        document.getElementById('start-btn').textContent = '重新开始';
-        alert(`俄罗斯方块结束！得分: ${player.score}`);
+        document.getElementById('start-btn').textContent = 'もう一度プレイ';
+        alert(`ゲームオーバー！スコア: ${player.score} 点`);
         saveScoreToCloud('tetris', player.score);
       }
     }
@@ -541,18 +538,18 @@
       player.score = 0;
       document.getElementById('score-val').textContent = '0';
       isTetrisOver = false;
-      document.getElementById('start-btn').textContent = '重新开始';
+      document.getElementById('start-btn').textContent = 'リスタート';
       playerReset();
       lastTime = performance.now();
       updateTetris();
     }
 
     // ==========================================
-    // 6. 游戏 B：霓虹贪吃蛇引擎
+    // 6. ゲーム B：スネークゲーム (Snake)
     // ==========================================
     const sCanvas = document.getElementById('snake-canvas');
     const sCtx = sCanvas.getContext('2d');
-    const gridSize = 18; // 20x20 网格 (360 / 18 = 20)
+    const gridSize = 18;
     const tileCount = 20;
 
     let snake = [], food = { x: 10, y: 10 }, dx = 1, dy = 0, nextDx = 1, nextDy = 0;
@@ -562,9 +559,9 @@
       sCtx.fillStyle = '#020617';
       sCtx.fillRect(0, 0, sCanvas.width, sCanvas.height);
       sCtx.fillStyle = '#4ade80';
-      sCtx.font = '16px sans-serif';
+      sCtx.font = '15px sans-serif';
       sCtx.textAlign = 'center';
-      sCtx.fillText('点击上方「开始游戏」启动贪吃蛇', sCanvas.width / 2, sCanvas.height / 2);
+      sCtx.fillText('右上の「ゲーム開始」を押してスタート', sCanvas.width / 2, sCanvas.height / 2);
     }
 
     function spawnFood() {
@@ -572,7 +569,6 @@
         x: Math.floor(Math.random() * tileCount),
         y: Math.floor(Math.random() * tileCount)
       };
-      // 防止食物刷在蛇身上
       if (snake.some(seg => seg.x === food.x && seg.y === food.y)) spawnFood();
     }
 
@@ -582,7 +578,7 @@
       dx = 1; dy = 0; nextDx = 1; nextDy = 0;
       snakeScore = 0;
       document.getElementById('score-val').textContent = '0';
-      document.getElementById('start-btn').textContent = '重新开始';
+      document.getElementById('start-btn').textContent = 'リスタート';
       isSnakeOver = false;
       spawnFood();
       snakeTimer = setInterval(gameLoopSnake, 120);
@@ -593,20 +589,18 @@
       dx = nextDx; dy = nextDy;
       const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-      // 撞墙或撞自己判定
       if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount ||
           snake.some(seg => seg.x === head.x && seg.y === head.y)) {
         isSnakeOver = true;
         clearInterval(snakeTimer);
-        document.getElementById('start-btn').textContent = '重新开始';
-        alert(`贪吃蛇游戏结束！本次得分: ${snakeScore}`);
+        document.getElementById('start-btn').textContent = 'もう一度プレイ';
+        alert(`ゲームオーバー！スコア: ${snakeScore} 点`);
         saveScoreToCloud('snake', snakeScore);
         return;
       }
 
       snake.unshift(head);
 
-      // 吃到食物判定
       if (head.x === food.x && head.y === food.y) {
         snakeScore += 10;
         document.getElementById('score-val').textContent = snakeScore;
@@ -615,17 +609,14 @@
         snake.pop();
       }
 
-      // 绘制画面
       sCtx.fillStyle = '#020617';
       sCtx.fillRect(0, 0, sCanvas.width, sCanvas.height);
 
-      // 画食物
       sCtx.fillStyle = '#ef4444';
       sCtx.beginPath();
       sCtx.arc(food.x * gridSize + gridSize / 2, food.y * gridSize + gridSize / 2, gridSize / 2 - 2, 0, Math.PI * 2);
       sCtx.fill();
 
-      // 画蛇身
       snake.forEach((seg, index) => {
         sCtx.fillStyle = index === 0 ? '#4ade80' : '#22c55e';
         sCtx.fillRect(seg.x * gridSize + 1, seg.y * gridSize + 1, gridSize - 2, gridSize - 2);
@@ -633,7 +624,7 @@
     }
 
     // ==========================================
-    // 7. 全局键盘事件分发
+    // 7. キーボード操作イベント
     // ==========================================
     document.addEventListener('keydown', e => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -660,7 +651,7 @@
       }
     });
 
-    // 启动初始化
+    // 初期化実行
     drawTetris();
     checkSession();
   </script>
