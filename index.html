@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade Cloud - 个人游戏平台</title>
+  <!-- 引入 Supabase 官方 JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; --danger: #ef4444; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    header { width: 100%; max-width: 960px; display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #334155; margin-bottom: 24px; }
+    h1 { font-size: 1.5rem; color: var(--accent); }
+    .container { width: 100%; max-width: 960px; display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+    @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+    
+    /* 认证表单样式 */
+    .auth-box { max-width: 400px; margin: 40px auto; width: 100%; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
+    input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
+    button { background: var(--accent); color: #0f172a; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    button.secondary { background: #334155; color: white; }
+    button.danger { background: var(--danger); color: white; }
+    .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+    .msg { margin-top: 12px; font-size: 0.85rem; color: #fbbf24; min-height: 20px; }
+
+    /* 游戏区域样式 */
+    .game-area { display: flex; flex-direction: column; align-items: center; }
+    canvas { background: #020617; border: 2px solid #334155; border-radius: 4px; }
+    .stats { display: flex; gap: 24px; margin: 16px 0; font-size: 1.1rem; font-weight: bold; }
+    .controls-hint { font-size: 0.85rem; color: #94a3b8; margin-top: 12px; text-align: center; }
+
+    /* 排行榜样式 */
+    .rank-list { list-style: none; margin-top: 12px; }
+    .rank-item { display: flex; justify-content: space-between; padding: 10px 8px; border-bottom: 1px solid #334155; font-size: 0.95rem; }
+    .rank-item:first-child { color: #fbbf24; font-weight: bold; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🎮 Arcade Cloud 游戏平台</h1>
+    <div id="user-bar" class="hidden">
+      <span id="user-display" style="margin-right: 12px; color: #94a3b8;"></span>
+      <button class="danger" onclick="handleLogout()">退出登录</button>
+    </div>
+  </header>
+
+  <!-- 1. 用户注册与登录视图 -->
+  <div id="auth-view" class="card auth-box">
+    <h2 style="margin-bottom: 16px;">玩家登录 / 注册</h2>
+    <div class="form-group">
+      <label>玩家昵称（仅注册时必填）</label>
+      <input type="text" id="username-input" placeholder="例如: TetrisMaster">
+    </div>
+    <div class="form-group">
+      <label>电子邮箱</label>
+      <input type="email" id="email-input" placeholder="player@example.com">
+    </div>
+    <div class="form-group">
+      <label>密码（至少 6 位）</label>
+      <input type="password" id="password-input" placeholder="••••••">
+    </div>
+    <div class="btn-group">
+      <button onclick="handleLogin()" style="flex: 1;">登录</button>
+      <button class="secondary" onclick="handleSignUp()" style="flex: 1;">注册新账号</button>
+    </div>
+    <div id="auth-msg" class="msg"></div>
+  </div>
+
+  <!-- 2. 游戏大厅与排行榜视图 -->
+  <div id="platform-view" class="container hidden">
+    <!-- 左侧：俄罗斯方块游戏区 -->
+    <div class="card game-area">
+      <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2>🧱 经典俄罗斯方块</h2>
+        <button id="start-btn" onclick="startGame()">开始游戏</button>
+      </div>
+      <div class="stats">
+        <span>当前得分: <strong id="score-val" style="color: var(--accent);">0</strong></span>
+        <span>个人最高: <strong id="best-val" style="color: #34d399;">0</strong></span>
+      </div>
+      <canvas id="tetris" width="240" height="400"></canvas>
+      <div class="controls-hint">
+        操作说明：<strong>← →</strong> 左右移动 | <strong>↑</strong> 旋转方块 | <strong>↓</strong> 加速下落
+      </div>
+    </div>
+
+    <!-- 右侧：云端排行榜 -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>🏆 全服排行榜</h3>
+        <button class="secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="loadLeaderboard()">刷新</button>
+      </div>
+      <ul id="rank-list" class="rank-list">
+        <li class="rank-item">加载中...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. 初始化 Supabase 客户端（请替换为你的项目信息）
+    // ==========================================
+    const SUPABASE_URL = 'https://tijekdtlvaukoftmwmip.supabase.co/rest/v1/';
+    const SUPABASE_ANON_KEY = 'sb_publishable_gSiLVFW65_xnHw_u1Hv-TQ_1tF-orL0';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let personalBest = 0;
+
+    // ==========================================
+    // 2. 用户认证逻辑（注册、登录、会话保持）
+    // ==========================================
+    async function checkSession() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        showPlatform();
+      }
+    }
+
+    async function handleSignUp() {
+      const email = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value.trim();
+      const username = document.getElementById('username-input').value.trim() || email.split('@')[0];
+      const msgEl = document.getElementById('auth-msg');
+
+      if (!email || password.length < 6) {
+        msgEl.textContent = '请输入有效邮箱和至少6位密码';
+        return;
+      }
+
+      msgEl.textContent = '正在注册...';
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: username } }
+      });
+
+      if (error) {
+        msgEl.textContent = '注册失败: ' + error.message;
+      } else {
+        currentUser = data.user;
+        msgEl.textContent = '注册成功！正在进入平台...';
+        showPlatform();
+      }
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value.trim();
+      const msgEl = document.getElementById('auth-msg');
+
+      msgEl.textContent = '正在登录...';
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        msgEl.textContent = '登录失败: ' + error.message;
+      } else {
+        currentUser = data.user;
+        showPlatform();
+      }
+    }
+
+    async function handleLogout() {
+      await supabaseClient.auth.signOut();
+      currentUser = null;
+      isGameOver = true;
+      document.getElementById('auth-view').classList.remove('hidden');
+      document.getElementById('platform-view').classList.add('hidden');
+      document.getElementById('user-bar').classList.add('hidden');
+    }
+
+    function showPlatform() {
+      const displayName = currentUser.user_metadata?.display_name || currentUser.email;
+      document.getElementById('user-display').textContent = `你好, ${displayName}`;
+      document.getElementById('auth-view').classList.add('hidden');
+      document.getElementById('platform-view').classList.remove('hidden');
+      document.getElementById('user-bar').classList.remove('hidden');
+      loadLeaderboard();
+    }
+
+    // ==========================================
+    // 3. 数据库读写逻辑（上传成绩与加载排行榜）
+    // ==========================================
+    async function saveScoreToCloud(finalScore) {
+      if (!currentUser || finalScore <= 0) return;
+      const displayName = currentUser.user_metadata?.display_name || currentUser.email.split('@')[0];
+
+      const { error } = await supabaseClient
+        .from('tetris_scores')
+        .insert([{
+          user_id: currentUser.id,
+          username: displayName,
+          score: finalScore
+        }]);
+
+      if (!error) {
+        loadLeaderboard();
+      }
+    }
+
+    async function loadLeaderboard() {
+      const listEl = document.getElementById('rank-list');
+      // 获取全服前 10 名
+      const { data, error } = await supabaseClient
+        .from('tetris_scores')
+        .select('username, score, user_id')
+        .order('score', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        listEl.innerHTML = `<li class="rank-item">加载失败</li>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<li class="rank-item" style="color:#94a3b8;">暂无记录，快来创造第一名！</li>`;
+        return;
+      }
+
+      listEl.innerHTML = data.map((row, idx) => `
+        <li class="rank-item">
+          <span>#${idx + 1} ${escapeHtml(row.username)}</span>
+          <strong>${row.score} 分</strong>
+        </li>
+      `).join('');
+
+      // 查询个人最高分
+      if (currentUser) {
+        const { data: myData } = await supabaseClient
+          .from('tetris_scores')
+          .select('score')
+          .eq('user_id', currentUser.id)
+          .order('score', { ascending: false })
+          .limit(1);
+        if (myData && myData.length > 0) {
+          personalBest = myData[0].score;
+          document.getElementById('best-val').textContent = personalBest;
+        }
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    // ==========================================
+    // 4. 经典俄罗斯方块游戏引擎
+    // ==========================================
+    const canvas = document.getElementById('tetris');
+    const context = canvas.getContext('2d');
+    context.scale(20, 20); // 12x20 网格，每格 20px
+
+    const colors = [null, '#ef4444', '#38bdf8', '#4ade80', '#facc15', '#c084fc', '#fb923c', '#2dd4bf'];
+    const arena = Array.from({ length: 20 }, () => Array(12).fill(0));
+    const player = { pos: { x: 0, y: 0 }, matrix: null, score: 0 };
+
+    let dropCounter = 0;
+    let dropInterval = 800;
+    let lastTime = 0;
+    let isGameOver = true;
+    let animId = null;
+
+    function createPiece(type) {
+      if (type === 'T') return [[0,0,0],[1,1,1],[0,1,0]];
+      if (type === 'O') return [[2,2],[2,2]];
+      if (type === 'L') return [[0,3,0],[0,3,0],[0,3,3]];
+      if (type === 'J') return [[0,4,0],[0,4,0],[4,4,0]];
+      if (type === 'I') return [[0,5,0,0],[0,5,0,0],[0,5,0,0],[0,5,0,0]];
+      if (type === 'S') return [[0,6,6],[6,6,0],[0,0,0]];
+      if (type === 'Z') return [[7,7,0],[0,7,7],[0,0,0]];
+    }
+
+    function collide(arena, player) {
+      const [m, o] = [player.matrix, player.pos];
+      for (let y = 0; y < m.length; ++y) {
+        for (let x = 0; x < m[y].length; ++x) {
+          if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function merge(arena, player) {
+      player.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value;
+        });
+      });
+    }
+
+    function arenaSweep() {
+      let rowCount = 1;
+      outer: for (let y = arena.length - 1; y > 0; --y) {
+        for (let x = 0; x < arena[y].length; ++x) {
+          if (arena[y][x] === 0) continue outer;
+        }
+        const row = arena.splice(y, 1)[0].fill(0);
+        arena.unshift(row);
+        ++y;
+        player.score += rowCount * 100;
+        rowCount *= 2;
+      }
+      document.getElementById('score-val').textContent = player.score;
+    }
+
+    function rotate(matrix) {
+      for (let y = 0; y < matrix.length; ++y) {
+        for (let x = 0; x < y; ++x) {
+          [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        }
+      }
+      matrix.forEach(row => row.reverse());
+    }
+
+    function playerReset() {
+      const pieces = 'ILJOTSZ';
+      player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+      player.pos.y = 0;
+      player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+      if (collide(arena, player)) {
+        isGameOver = true;
+        document.getElementById('start-btn').textContent = '重新开始';
+        alert(`游戏结束！本次得分: ${player.score}，正在同步至云端排行榜...`);
+        saveScoreToCloud(player.score);
+      }
+    }
+
+    function playerDrop() {
+      player.pos.y++;
+      if (collide(arena, player)) {
+        player.pos.y--;
+        merge(arena, player);
+        playerReset();
+        arenaSweep();
+      }
+      dropCounter = 0;
+    }
+
+    function playerMove(dir) {
+      player.pos.x += dir;
+      if (collide(arena, player)) player.pos.x -= dir;
+    }
+
+    function playerRotate() {
+      const pos = player.pos.x;
+      let offset = 1;
+      rotate(player.matrix);
+      while (collide(arena, player)) {
+        player.pos.x += offset;
+        offset = -(offset + (offset > 0 ? 1 : -1));
+        if (offset > player.matrix[0].length) {
+          rotate(player.matrix); rotate(player.matrix); rotate(player.matrix);
+          player.pos.x = pos;
+          return;
+        }
+      }
+    }
+
+    function drawMatrix(matrix, offset) {
+      matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            context.fillStyle = colors[value];
+            context.fillRect(x + offset.x, y + offset.y, 1, 1);
+          }
+        });
+      });
+    }
+
+    function draw() {
+      context.fillStyle = '#020617';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      drawMatrix(arena, { x: 0, y: 0 });
+      if (player.matrix) drawMatrix(player.matrix, player.pos);
+    }
+
+    function update(time = 0) {
+      if (isGameOver) return;
+      const deltaTime = time - lastTime;
+      lastTime = time;
+      dropCounter += deltaTime;
+      if (dropCounter > dropInterval) playerDrop();
+      draw();
+      animId = requestAnimationFrame(update);
+    }
+
+    function startGame() {
+      if (animId) cancelAnimationFrame(animId);
+      arena.forEach(row => row.fill(0));
+      player.score = 0;
+      document.getElementById('score-val').textContent = '0';
+      isGameOver = false;
+      document.getElementById('start-btn').textContent = '重新开始';
+      playerReset();
+      lastTime = performance.now();
+      update();
+    }
+
+    document.addEventListener('keydown', event => {
+      if (isGameOver) return;
+      if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
+        event.preventDefault();
+      }
+      if (event.key === 'ArrowLeft') playerMove(-1);
+      else if (event.key === 'ArrowRight') playerMove(1);
+      else if (event.key === 'ArrowDown') playerDrop();
+      else if (event.key === 'ArrowUp') playerRotate();
+    });
+
+    // 页面加载时检查登录状态
+    draw();
+    checkSession();
+  </script>
+</body>
+</html>
