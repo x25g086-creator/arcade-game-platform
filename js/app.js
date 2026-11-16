@@ -6,8 +6,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_gSiLVFW65_xnHw_u1Hv-TQ_1tF-orL0';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // 【チーム連携用インターフェース設定】
-// チームのカレンダーWebアプリが完成したら、ここに本番URLを設定してください
 const DEFAULT_CALENDAR_APP_URL = 'https://example.com/calendar-app';
+
+// 登録済み全ゲーム一覧
+const GAME_KEYS = ['tetris', 'snake', 'mario', 'dino', 'game2048', 'breakout', 'galaga'];
 
 let currentUser = null;
 let activeGame = 'tetris';
@@ -18,7 +20,6 @@ if (urlParams.get('return_url')) {
   sessionStorage.setItem('calendar_return_url', urlParams.get('return_url'));
 }
 
-// カレンダーWebアプリへの遷移インターフェース関数
 function jumpToCalendarApp() {
   stopAllGames();
   const targetBaseUrl = sessionStorage.getItem('calendar_return_url') || DEFAULT_CALENDAR_APP_URL;
@@ -33,7 +34,6 @@ function jumpToCalendarApp() {
     return;
   }
 
-  // ログイン中のユーザー情報や戻り元情報をパラメータとして付与して遷移
   const targetUrl = new URL(targetBaseUrl);
   targetUrl.searchParams.set('from', 'arcade_platform');
   if (currentUser) {
@@ -126,7 +126,7 @@ function selectGame(gameKey) {
   activeGame = gameKey;
   switchTopTab('games');
 
-  ['tetris', 'snake', 'mario'].forEach(g => {
+  GAME_KEYS.forEach(g => {
     document.getElementById(`menu-${g}`).classList.toggle('active', g === gameKey);
     document.getElementById(`${g}-canvas`).classList.toggle('hidden', g !== gameKey);
   });
@@ -224,7 +224,7 @@ async function loadLeaderboard() {
 
 async function loadProfileStats() {
   if (!currentUser) return;
-  for (const g of ['tetris', 'snake', 'mario']) {
+  for (const g of GAME_KEYS) {
     const { data } = await supabaseClient
       .from('tetris_scores')
       .select('score')
@@ -241,5 +241,4 @@ function escapeHtml(str) {
   return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 }
 
-// 起動時のセッション確認
 checkSession();
