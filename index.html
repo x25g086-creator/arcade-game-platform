@@ -57,30 +57,25 @@
   <!-- ログイン後のメイン3カラム画面 -->
   <div id="platform-view" class="main-layout hidden">
     
-    <!-- 左側：ゲーム選択メニュー（全7タイトル） -->
+    <!-- 左側：ゲーム選択メニュー -->
     <aside class="card">
-      <div class="sidebar-title">ゲーム一覧 (全7タイトル)</div>
-      <ul class="menu-list">
+      <div class="sidebar-title">標準アーケード</div>
+      <ul class="menu-list" style="margin-bottom: 20px;">
         <li class="menu-item active" id="menu-tetris" onclick="selectGame('tetris')">
           <span>🧱</span> <span>テトリス</span>
         </li>
-        <li class="menu-item" id="menu-snake" onclick="selectGame('snake')">
-          <span>🐍</span> <span>スネークゲーム</span>
+      </ul>
+
+      <div class="sidebar-title">オープンソース大作 (Web移植)</div>
+      <ul class="menu-list">
+        <li class="menu-item" id="menu-mindustry" onclick="selectGame('mindustry')">
+          <span>🏭</span> <span>Mindustry (工場タワー防衛)</span>
         </li>
-        <li class="menu-item" id="menu-mario" onclick="selectGame('mario')">
-          <span>🍄</span> <span>マリオ風ラン</span>
+        <li class="menu-item" id="menu-browserquest" onclick="selectGame('browserquest')">
+          <span>⚔️</span> <span>BrowserQuest (冒険RPG)</span>
         </li>
-        <li class="menu-item" id="menu-dino" onclick="selectGame('dino')">
-          <span>🦖</span> <span>恐竜ランナー</span>
-        </li>
-        <li class="menu-item" id="menu-game2048" onclick="selectGame('game2048')">
-          <span>🔢</span> <span>2048 パズル</span>
-        </li>
-        <li class="menu-item" id="menu-breakout" onclick="selectGame('breakout')">
-          <span>🧱</span> <span>ブロック崩し</span>
-        </li>
-        <li class="menu-item" id="menu-galaga" onclick="selectGame('galaga')">
-          <span>🚀</span> <span>スペースシューター</span>
+        <li class="menu-item" id="menu-cnc" onclick="selectGame('cnc')">
+          <span>🎖️</span> <span>Command &amp; Conquer (RTS)</span>
         </li>
       </ul>
     </aside>
@@ -91,67 +86,66 @@
       <div id="tab-games" class="game-stage">
         <div class="stage-header">
           <h2 id="current-game-title">🧱 テトリス (Tetris)</h2>
-          <button class="primary" id="start-btn" onclick="startCurrentGame()">ゲーム開始</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="secondary hidden" id="fullscreen-btn" onclick="toggleExternalFullscreen()">⛶ フルスクリーン</button>
+            <button class="primary" id="start-btn" onclick="startCurrentGame()">ゲーム開始</button>
+          </div>
         </div>
-        <div class="stats-bar">
+
+        <!-- ローカルCanvasゲーム用スコアバー -->
+        <div id="local-stats-bar" class="stats-bar">
           <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
           <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
         </div>
 
+        <!-- 外部オープンソース大作用プレイ記録バー -->
+        <div id="external-stats-bar" class="stats-bar hidden">
+          <span>プレイ記録・クリア回数: <strong id="ext-play-count" style="color: var(--green);">0 回</strong></span>
+          <button class="primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="recordExternalPlay()">🏅 プレイ実績を記録 (+100pt)</button>
+        </div>
+
+        <!-- ローカルCanvasステージ -->
         <canvas id="tetris-canvas" width="240" height="400"></canvas>
-        <canvas id="snake-canvas" width="340" height="340" class="hidden"></canvas>
-        <canvas id="mario-canvas" width="520" height="320" class="hidden"></canvas>
-        <canvas id="dino-canvas" width="520" height="300" class="hidden"></canvas>
-        <canvas id="game2048-canvas" width="354" height="354" class="hidden"></canvas>
-        <canvas id="breakout-canvas" width="460" height="340" class="hidden"></canvas>
-        <canvas id="galaga-canvas" width="440" height="380" class="hidden"></canvas>
+
+        <!-- 外部オープンソースWebゲーム内嵌ステージ（ページ遷移なし） -->
+        <div id="external-frame-wrapper" class="external-wrapper hidden">
+          <iframe id="external-game-frame" src="about:blank" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe>
+        </div>
 
         <div id="controls-hint" class="controls-hint"></div>
       </div>
 
-      <!-- 2. マイページ（全7タイトル戦績） -->
+      <!-- 2. マイページ -->
       <div id="tab-profile" class="hidden">
         <h2>👤 マイページ・戦績一覧</h2>
         <p style="color: var(--muted); margin-top: 6px; font-size: 0.9rem;" id="profile-email"></p>
         <div class="profile-grid">
           <div class="stat-box">
-            <div class="stat-label">🧱 テトリス</div>
+            <div class="stat-label">🧱 テトリス (ハイスコア)</div>
             <div class="stat-num" style="color: var(--accent);" id="profile-tetris-best">0 点</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">🐍 スネーク</div>
-            <div class="stat-num" style="color: var(--green);" id="profile-snake-best">0 点</div>
+            <div class="stat-label">🏭 Mindustry (実績pt)</div>
+            <div class="stat-num" style="color: #38bdf8;" id="profile-mindustry-best">0 点</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">🍄 マリオ風ラン</div>
-            <div class="stat-num" style="color: #f87171;" id="profile-mario-best">0 点</div>
+            <div class="stat-label">⚔️ BrowserQuest (実績pt)</div>
+            <div class="stat-num" style="color: var(--green);" id="profile-browserquest-best">0 点</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">🦖 恐竜ランナー</div>
-            <div class="stat-num" style="color: #38bdf8;" id="profile-dino-best">0 点</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">🔢 2048 パズル</div>
-            <div class="stat-num" style="color: #facc15;" id="profile-game2048-best">0 点</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">🧱 ブロック崩し</div>
-            <div class="stat-num" style="color: #fb923c;" id="profile-breakout-best">0 点</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">🚀 スペースシューター</div>
-            <div class="stat-num" style="color: #c084fc;" id="profile-galaga-best">0 点</div>
+            <div class="stat-label">🎖️ Command &amp; Conquer (実績pt)</div>
+            <div class="stat-num" style="color: #facc15;" id="profile-cnc-best">0 点</div>
           </div>
         </div>
       </div>
 
       <!-- 3. システム概要 -->
       <div id="tab-about" class="hidden">
-        <h2>📖 システム構成・モジュール設計概要</h2>
+        <h2>📖 システム構成・ハイブリッド統合設計</h2>
         <p style="color: var(--muted); line-height: 1.8; margin-top: 12px; font-size: 0.92rem;">
-          本プラットフォームはモジュール分離設計および外部Webアプリ連携に対応しています：<br>
-          • <strong>モジュール分割</strong>：UI（HTML/CSS）・コア基盤（app.js）・各ゲームエンジン（js/games/*.js 全7タイトル）を完全独立管理<br>
-          • <strong>認証・クラウドDB</strong>：Supabase Auth + PostgreSQL による全ゲーム共通ランキング<br>
+          本プラットフォームは独自開発ゲームと大規模オープンソースWebゲームの統合に対応しています：<br>
+          • <strong>デュアルエンジン構成</strong>：軽量な独自Canvasモジュール（テトリス）と、サンドボックス化された大型OSSゲーム（Mindustry / BrowserQuest / C&amp;C HTML5）を同一画面内で切り替え可能<br>
+          • <strong>認証・クラウドDB</strong>：Supabase Auth + PostgreSQL による全タイトル共通ランキング・実績管理<br>
           • <strong>外部カレンダー連携</strong>：URLパラメータ（<code>?return_url=...</code>）による相互遷移インターフェースを実装済み。
         </p>
       </div>
@@ -170,15 +164,8 @@
 
   </div>
 
-  <!-- ゲームモジュール群を順番に読み込み、最後にコア制御 app.js を起動 -->
   <script>window.ArcadeGames = {};</script>
   <script src="js/games/tetris.js"></script>
-  <script src="js/games/snake.js"></script>
-  <script src="js/games/mario.js"></script>
-  <script src="js/games/dino.js"></script>
-  <script src="js/games/game2048.js"></script>
-  <script src="js/games/breakout.js"></script>
-  <script src="js/games/galaga.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
