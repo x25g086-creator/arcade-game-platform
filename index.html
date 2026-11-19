@@ -59,23 +59,10 @@
     
     <!-- 左側：ゲーム選択メニュー -->
     <aside class="card">
-      <div class="sidebar-title">標準アーケード</div>
-      <ul class="menu-list" style="margin-bottom: 20px;">
+      <div class="sidebar-title">アーケードゲーム</div>
+      <ul class="menu-list">
         <li class="menu-item active" id="menu-tetris" onclick="selectGame('tetris')">
           <span>🧱</span> <span>テトリス</span>
-        </li>
-      </ul>
-
-      <div class="sidebar-title">オープンソース大作 (Web移植)</div>
-      <ul class="menu-list">
-        <li class="menu-item" id="menu-mindustry" onclick="selectGame('mindustry')">
-          <span>🏭</span> <span>Mindustry (工場タワー防衛)</span>
-        </li>
-        <li class="menu-item" id="menu-browserquest" onclick="selectGame('browserquest')">
-          <span>⚔️</span> <span>BrowserQuest (冒険RPG)</span>
-        </li>
-        <li class="menu-item" id="menu-cnc" onclick="selectGame('cnc')">
-          <span>🎖️</span> <span>Command &amp; Conquer (RTS)</span>
         </li>
       </ul>
     </aside>
@@ -86,31 +73,17 @@
       <div id="tab-games" class="game-stage">
         <div class="stage-header">
           <h2 id="current-game-title">🧱 テトリス (Tetris)</h2>
-          <div style="display: flex; gap: 8px;">
-            <button class="secondary hidden" id="fullscreen-btn" onclick="toggleExternalFullscreen()">⛶ フルスクリーン</button>
-            <button class="primary" id="start-btn" onclick="startCurrentGame()">ゲーム開始</button>
-          </div>
+          <button class="primary" id="start-btn" onclick="startCurrentGame()">ゲーム開始</button>
         </div>
 
-        <!-- ローカルCanvasゲーム用スコアバー -->
-        <div id="local-stats-bar" class="stats-bar">
+        <!-- スコアバー -->
+        <div class="stats-bar">
           <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
           <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
         </div>
 
-        <!-- 外部オープンソース大作用プレイ記録バー -->
-        <div id="external-stats-bar" class="stats-bar hidden">
-          <span>プレイ記録・クリア回数: <strong id="ext-play-count" style="color: var(--green);">0 回</strong></span>
-          <button class="primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="recordExternalPlay()">🏅 プレイ実績を記録 (+100pt)</button>
-        </div>
-
-        <!-- ローカルCanvasステージ -->
+        <!-- テトリスCanvasステージ -->
         <canvas id="tetris-canvas" width="240" height="400"></canvas>
-
-        <!-- 外部オープンソースWebゲーム内嵌ステージ（ページ遷移なし） -->
-        <div id="external-frame-wrapper" class="external-wrapper hidden">
-          <iframe id="external-game-frame" src="about:blank" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe>
-        </div>
 
         <div id="controls-hint" class="controls-hint"></div>
       </div>
@@ -124,28 +97,16 @@
             <div class="stat-label">🧱 テトリス (ハイスコア)</div>
             <div class="stat-num" style="color: var(--accent);" id="profile-tetris-best">0 点</div>
           </div>
-          <div class="stat-box">
-            <div class="stat-label">🏭 Mindustry (実績pt)</div>
-            <div class="stat-num" style="color: #38bdf8;" id="profile-mindustry-best">0 点</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">⚔️ BrowserQuest (実績pt)</div>
-            <div class="stat-num" style="color: var(--green);" id="profile-browserquest-best">0 点</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">🎖️ Command &amp; Conquer (実績pt)</div>
-            <div class="stat-num" style="color: #facc15;" id="profile-cnc-best">0 点</div>
-          </div>
         </div>
       </div>
 
       <!-- 3. システム概要 -->
       <div id="tab-about" class="hidden">
-        <h2>📖 システム構成・ハイブリッド統合設計</h2>
+        <h2>📖 システム構成・概要</h2>
         <p style="color: var(--muted); line-height: 1.8; margin-top: 12px; font-size: 0.92rem;">
-          本プラットフォームは独自開発ゲームと大規模オープンソースWebゲームの統合に対応しています：<br>
-          • <strong>デュアルエンジン構成</strong>：軽量な独自Canvasモジュール（テトリス）と、サンドボックス化された大型OSSゲーム（Mindustry / BrowserQuest / C&amp;C HTML5）を同一画面内で切り替え可能<br>
-          • <strong>認証・クラウドDB</strong>：Supabase Auth + PostgreSQL による全タイトル共通ランキング・実績管理<br>
+          本プラットフォームはクラウド連携型のWebアーケードゲームシステムです：<br>
+          • <strong>モジュール型ゲーム構成</strong>：HTML5 Canvas ベースのテトリスモジュールを搭載し、今後のオープンソースゲーム拡張にも対応可能<br>
+          • <strong>認証・クラウドDB</strong>：Supabase Auth + PostgreSQL によるユーザー認証・リアルタイムランキング管理<br>
           • <strong>外部カレンダー連携</strong>：URLパラメータ（<code>?return_url=...</code>）による相互遷移インターフェースを実装済み。
         </p>
       </div>
@@ -159,13 +120,3 @@
       </div>
       <ul id="rank-list" class="rank-list">
         <li class="rank-item">読み込み中...</li>
-      </ul>
-    </aside>
-
-  </div>
-
-  <script>window.ArcadeGames = {};</script>
-  <script src="js/games/tetris.js"></script>
-  <script src="js/app.js"></script>
-</body>
-</html>
