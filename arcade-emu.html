@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade FBNeo Emulator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html {
+      width: 100%;
+      height: 100%;
+      background: #020617;
+      color: #f8fafc;
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+    .rom-loader {
+      text-align: center;
+      padding: 28px 24px;
+      border: 2px dashed #38bdf8;
+      border-radius: 14px;
+      background: #0f172a;
+      max-width: 440px;
+      width: 90%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+    .rom-badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      font-size: 0.78rem;
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+    .rom-loader h3 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: #f8fafc;
+    }
+    .rom-loader p {
+      font-size: 0.86rem;
+      color: #94a3b8;
+      line-height: 1.65;
+      margin-bottom: 18px;
+    }
+    .rom-filename {
+      color: #4ade80;
+      font-family: monospace;
+      font-weight: bold;
+      background: #1e293b;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .upload-btn {
+      background: #38bdf8;
+      color: #0f172a;
+      padding: 11px 22px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-block;
+      transition: opacity 0.2s;
+    }
+    .upload-btn:hover { opacity: 0.9; }
+    input[type="file"] { display: none; }
+    .key-tip {
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: #64748b;
+      border-top: 1px solid #1e293b;
+      padding-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader-box" class="rom-loader">
+    <div class="rom-badge">CPS1 / CPS2 / NeoGeo / Irem 基板対応</div>
+    <h3 id="rom-title">🕹️ アーケード基板エミュレータ</h3>
+    <p id="rom-desc">
+      対応ROMファイル：<span id="rom-hint" class="rom-filename">game.zip</span><br>
+      下のボタンからローカルのROMファイルを選択すると、ブラウザ上で即座に起動します。
+    </p>
+    <label class="upload-btn">
+      📂 ROMファイル (.zip) を選択して起動
+      <input type="file" id="rom-input" accept=".zip,.7z">
+    </label>
+    <div class="key-tip">
+      初期操作：<strong>方向キー</strong> 移動 ｜ <strong>Z / X / A / S</strong> ボタン ｜ <strong>Shift</strong> コイン投入 ｜ <strong>Enter</strong> スタート
+    </div>
+  </div>
+
+  <div id="game" style="display:none;"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const gameTitle = params.get('title');
+    const romHint = params.get('hint');
+    const romUrl = params.get('rom');
+
+    if (gameTitle) document.getElementById('rom-title').textContent = gameTitle;
+    if (romHint) document.getElementById('rom-hint').textContent = romHint;
+
+    function bootEmulator(url) {
+      document.getElementById('loader-box').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+
+      window.EJS_player = '#game';
+      window.EJS_core = 'fbneo';
+      window.EJS_gameUrl = url;
+      window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+      window.EJS_startOnLoaded = true;
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      document.body.appendChild(script);
+    }
+
+    if (romUrl) {
+      bootEmulator(romUrl);
+    }
+
+    document.getElementById('rom-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const blobUrl = URL.createObjectURL(file);
+        bootEmulator(blobUrl);
+      }
+    });
+  </script>
+</body>
+</html>

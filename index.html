@@ -59,10 +59,29 @@
     
     <!-- 左側：ゲーム選択メニュー -->
     <aside class="card">
-      <div class="sidebar-title">アーケードゲーム</div>
-      <ul class="menu-list">
+      <div class="sidebar-title">標準アーケード</div>
+      <ul class="menu-list" style="margin-bottom: 18px;">
         <li class="menu-item active" id="menu-tetris" onclick="selectGame('tetris')">
           <span>🧱</span> <span>テトリス</span>
+        </li>
+      </ul>
+
+      <div class="sidebar-title">クラシック基板 (FBNeo)</div>
+      <ul class="menu-list">
+        <li class="menu-item" id="menu-dino" onclick="selectGame('dino')">
+          <span>🦖</span> <span>恐龍快打 (キャディラックス)</span>
+        </li>
+        <li class="menu-item" id="menu-kof2002" onclick="selectGame('kof2002')">
+          <span>🔥</span> <span>拳皇2002 風雲再起</span>
+        </li>
+        <li class="menu-item" id="menu-wof" onclick="selectGame('wof')">
+          <span>⚔️</span> <span>三国志 赤壁の戦い</span>
+        </li>
+        <li class="menu-item" id="menu-nbbatman" onclick="selectGame('nbbatman')">
+          <span>⚾</span> <span>野球小子 (忍者ベースボール)</span>
+        </li>
+        <li class="menu-item" id="menu-mslugx" onclick="selectGame('mslugx')">
+          <span>🔫</span> <span>メタルスラッグ X</span>
         </li>
       </ul>
     </aside>
@@ -73,17 +92,31 @@
       <div id="tab-games" class="game-stage">
         <div class="stage-header">
           <h2 id="current-game-title">🧱 テトリス (Tetris)</h2>
-          <button class="primary" id="start-btn" onclick="startCurrentGame()">ゲーム開始</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="secondary hidden" id="fullscreen-btn" onclick="toggleExternalFullscreen()">⛶ フルスクリーン</button>
+            <button class="primary" id="start-btn" onclick="startCurrentGame()">ゲーム開始</button>
+          </div>
         </div>
 
-        <!-- スコアバー -->
-        <div class="stats-bar">
+        <!-- ローカルCanvas用スコアバー -->
+        <div id="local-stats-bar" class="stats-bar">
           <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
           <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
         </div>
 
+        <!-- クラシック基板エミュレータ用記録バー -->
+        <div id="external-stats-bar" class="stats-bar hidden">
+          <span>累計プレイ実績: <strong id="ext-play-count" style="color: var(--green);">0 pt</strong></span>
+          <button class="primary" style="padding: 4px 12px; font-size: 0.82rem;" onclick="recordExternalPlay()">🏅 プレイ・クリア記録 (+100pt)</button>
+        </div>
+
         <!-- テトリスCanvasステージ -->
         <canvas id="tetris-canvas" width="240" height="400"></canvas>
+
+        <!-- 街机エミュレータ内嵌ステージ -->
+        <div id="external-frame-wrapper" class="external-wrapper hidden">
+          <iframe id="external-game-frame" src="about:blank" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe>
+        </div>
 
         <div id="controls-hint" class="controls-hint"></div>
       </div>
@@ -97,16 +130,36 @@
             <div class="stat-label">🧱 テトリス (ハイスコア)</div>
             <div class="stat-num" style="color: var(--accent);" id="profile-tetris-best">0 点</div>
           </div>
+          <div class="stat-box">
+            <div class="stat-label">🦖 恐龍快打 (実績pt)</div>
+            <div class="stat-num" style="color: var(--green);" id="profile-dino-best">0 点</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">🔥 拳皇2002 (実績pt)</div>
+            <div class="stat-num" style="color: #fb923c;" id="profile-kof2002-best">0 点</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">⚔️ 三国志 (実績pt)</div>
+            <div class="stat-num" style="color: #facc15;" id="profile-wof-best">0 点</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">⚾ 野球小子 (実績pt)</div>
+            <div class="stat-num" style="color: #38bdf8;" id="profile-nbbatman-best">0 点</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">🔫 メタルスラッグX (実績pt)</div>
+            <div class="stat-num" style="color: #c084fc;" id="profile-mslugx-best">0 点</div>
+          </div>
         </div>
       </div>
 
       <!-- 3. システム概要 -->
       <div id="tab-about" class="hidden">
-        <h2>📖 システム構成・概要</h2>
+        <h2>📖 システム構成・ハイブリッド統合設計</h2>
         <p style="color: var(--muted); line-height: 1.8; margin-top: 12px; font-size: 0.92rem;">
-          本プラットフォームはクラウド連携型のWebアーケードゲームシステムです：<br>
-          • <strong>モジュール型ゲーム構成</strong>：HTML5 Canvas ベースのテトリスモジュールを搭載し、今後のオープンソースゲーム拡張にも対応可能<br>
-          • <strong>認証・クラウドDB</strong>：Supabase Auth + PostgreSQL によるユーザー認証・リアルタイムランキング管理<br>
+          本プラットフォームは独自CanvasゲームとWebAssemblyアーケード基板エミュレータ（FBNeo）を統合したクラウドゲームシステムです：<br>
+          • <strong>デュアルエンジン構成</strong>：軽量Canvasモジュールと、CPS1/CPS2/NeoGeo/Irem基板対応エミュレータを同一画面内で切り替え可能<br>
+          • <strong>認証・クラウドDB</strong>：Supabase Auth + PostgreSQL による全タイトル共通ランキング・実績管理<br>
           • <strong>外部カレンダー連携</strong>：URLパラメータ（<code>?return_url=...</code>）による相互遷移インターフェースを実装済み。
         </p>
       </div>
