@@ -8,31 +8,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 // 【チーム連携用インターフェース設定】
 const DEFAULT_CALENDAR_APP_URL = 'https://example.com/calendar-app';
 
-// 全タイトル一覧（ローカルCanvas + 外部OSS大作）
-const GAME_KEYS = ['tetris', 'mindustry', 'browserquest', 'cnc'];
-
-// 外部オープンソースWebゲーム設定
-// ※ 各自のGitHubリポジトリにビルド済みを配置した場合は './games_external/xxx/index.html' に変更可能
-const EXTERNAL_GAMES = {
-  mindustry: {
-    title: '🏭 Mindustry (工場建設・タワーディフェンス)',
-    rankTitle: '🏆 Mindustry 実績ランキング',
-    url: 'https://mindustrygame.github.io/',
-    controlsHint: 'オープンソースOSS（GPL-3.0）：マウス操作でドリル・コンベア・砲塔を配置し基地を防衛しよう！'
-  },
-  browserquest: {
-    title: '⚔️ BrowserQuest (Mozilla マルチプレイRPG)',
-    rankTitle: '🏆 BrowserQuest 実績ランキング',
-    url: 'https://browserquest.herokuapp.com/',
-    controlsHint: 'オープンソースOSS（MPL-2.0）：クリックで移動・攻撃。装備を集めて魔王を倒そう！'
-  },
-  cnc: {
-    title: '🎖️ Command & Conquer HTML5 (リアルタイム戦略)',
-    rankTitle: '🏆 C&C RTS 実績ランキング',
-    url: 'https://www.adityaravishankar.com/projects/games/command-and-conquer/',
-    controlsHint: 'オープンソースOSS（MIT）：基地を建設し戦車部隊を生産して敵軍を制圧しよう！'
-  }
-};
+// 登録済みゲーム一覧（現在はテトリスのみ）
+const GAME_KEYS = ['tetris'];
 
 let currentUser = null;
 let activeGame = 'tetris';
@@ -125,7 +102,7 @@ function showPlatform() {
 }
 
 // ==========================================
-// 3. ナビゲーション＆ゲーム切り替え（Canvas / Iframe 両対応）
+// 3. ナビゲーション＆ゲーム切り替え
 // ==========================================
 function switchTopTab(tab) {
   ['games', 'profile', 'about'].forEach(t => {
@@ -141,8 +118,6 @@ function stopAllGames() {
       gameModule.stop();
     }
   });
-  const frame = document.getElementById('external-game-frame');
-  if (frame) frame.src = 'about:blank';
 }
 
 function selectGame(gameKey) {
@@ -155,58 +130,21 @@ function selectGame(gameKey) {
     if (menuEl) menuEl.classList.toggle('active', g === gameKey);
   });
 
-  const isExternal = Boolean(EXTERNAL_GAMES[gameKey]);
-  const tetrisCanvas = document.getElementById('tetris-canvas');
-  const extWrapper = document.getElementById('external-frame-wrapper');
-  const extFrame = document.getElementById('external-game-frame');
-  const localStats = document.getElementById('local-stats-bar');
-  const extStats = document.getElementById('external-stats-bar');
-  const startBtn = document.getElementById('start-btn');
-  const fsBtn = document.getElementById('fullscreen-btn');
+  document.getElementById('start-btn').textContent = 'ゲーム開始';
+  document.getElementById('score-val').textContent = '0';
 
-  if (!isExternal) {
-    // ローカルCanvasゲーム（テトリス）
-    tetrisCanvas.classList.remove('hidden');
-    extWrapper.classList.add('hidden');
-    localStats.classList.remove('hidden');
-    extStats.classList.add('hidden');
-    fsBtn.classList.add('hidden');
-    startBtn.textContent = 'ゲーム開始';
-    document.getElementById('score-val').textContent = '0';
-
-    const module = window.ArcadeGames[gameKey];
-    if (module) {
-      document.getElementById('current-game-title').textContent = module.title;
-      document.getElementById('rank-title').textContent = module.rankTitle;
-      document.getElementById('controls-hint').innerHTML = module.controlsHint;
-      if (typeof module.initIdle === 'function') module.initIdle();
-    }
-  } else {
-    // 外部オープンソース大作（Iframe内嵌・ページ遷移なし）
-    const ext = EXTERNAL_GAMES[gameKey];
-    tetrisCanvas.classList.add('hidden');
-    extWrapper.classList.remove('hidden');
-    localStats.classList.add('hidden');
-    extStats.classList.remove('hidden');
-    fsBtn.classList.remove('hidden');
-    startBtn.textContent = 'ゲーム再読込';
-
-    document.getElementById('current-game-title').textContent = ext.title;
-    document.getElementById('rank-title').textContent = ext.rankTitle;
-    document.getElementById('controls-hint').innerHTML = ext.controlsHint;
-    extFrame.src = ext.url;
+  const module = window.ArcadeGames[gameKey];
+  if (module) {
+    document.getElementById('current-game-title').textContent = module.title;
+    document.getElementById('rank-title').textContent = module.rankTitle;
+    document.getElementById('controls-hint').innerHTML = module.controlsHint;
+    if (typeof module.initIdle === 'function') module.initIdle();
   }
 
   loadLeaderboard();
 }
 
 function startCurrentGame() {
-  if (EXTERNAL_GAMES[activeGame]) {
-    const extFrame = document.getElementById('external-game-frame');
-    extFrame.src = EXTERNAL_GAMES[activeGame].url;
-    return;
-  }
-
   stopAllGames();
   document.getElementById('score-val').textContent = '0';
   document.getElementById('start-btn').textContent = 'リスタート';
@@ -226,19 +164,6 @@ function startCurrentGame() {
       }
     });
   }
-}
-
-function toggleExternalFullscreen() {
-  const wrapper = document.getElementById('external-frame-wrapper');
-  if (wrapper && wrapper.requestFullscreen) {
-    wrapper.requestFullscreen();
-  }
-}
-
-async function recordExternalPlay() {
-  if (!EXTERNAL_GAMES[activeGame]) return;
-  await saveScoreToCloud(activeGame, 100);
-  alert(`${EXTERNAL_GAMES[activeGame].title} のプレイ実績（+100pt）をクラウドに記録しました！`);
 }
 
 // ==========================================
@@ -295,11 +220,7 @@ async function loadLeaderboard() {
       .limit(1);
 
     const best = (myData && myData.length > 0) ? myData[0].score : 0;
-    if (EXTERNAL_GAMES[activeGame]) {
-      document.getElementById('ext-play-count').textContent = `${best} pt`;
-    } else {
-      document.getElementById('best-val').textContent = best;
-    }
+    document.getElementById('best-val').textContent = best;
   }
 }
 
