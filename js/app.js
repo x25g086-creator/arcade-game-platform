@@ -1,327 +1,372 @@
-// ==========================================
-// 1. Supabase ＆ 外部カレンダーアプリ連携設定
-// ==========================================
-const SUPABASE_URL = 'https://tijekdtlvaukoftmwmip.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_gSiLVFW65_xnHw_u1Hv-TQ_1tF-orL0';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const DEFAULT_CALENDAR_APP_URL = 'https://example.com/calendar-app';
-
-// 登録ゲーム一覧（テトリス ＆ パックマン）
-const GAME_KEYS = ['tetris', 'pacman'];
-
-// 独立HTML5ゲーム設定
-const WEB_GAMES = {
-  pacman: {
-    title: '👻 パックマン (Pac-Man)',
-    rankTitle: '🏆 パックマン ランキング',
-    url: './pacman.html',
-    controlsHint: '操作方法：<strong>矢印キー / WASD</strong> で移動 ｜ パワーエサを取るとゴーストを反撃できます！'
-  }
-};
-
 let currentUser = null;
 let activeGame = 'tetris';
 
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('return_url')) {
-  sessionStorage.setItem('calendar_return_url', urlParams.get('return_url'));
-}
+// DOM参照
+const views = document.querySelectorAll('.view-container');
+const navBtns = document.querySelectorAll('.nav-btn[data-view]');
+const authModal = document.getElementById('auth-modal');
+const authMessage = document.getElementById('auth-message');
 
-function jumpToCalendarApp() {
-  stopAllGames();
-  const targetBaseUrl = sessionStorage.getItem('calendar_return_url') || DEFAULT_CALENDAR_APP_URL;
+const tetrisCanvas = document.getElementById('tetris-canvas');
+const externalWrapper = document.getElementById('external-frame-wrapper');
+const externalFrame = document.getElementById('external-game-frame');
+const localStatsBar = document.getElementById('local-stats-bar');
+const startGameBtn = document.getElementById('start-game-btn');
+const controlsHint = document.getElementById('controls-hint');
+const cloudSavePanel = document.getElementById('cloud-save-panel');
 
-  if (targetBaseUrl === 'https://example.com/calendar-app') {
-    alert(
-      '【カレンダー連携インターフェース（開発待機中）】\n\n' +
-      'チームのカレンダーWebアプリのURLがまだ未設定です。\n' +
-      '完成後、js/app.js の DEFAULT_CALENDAR_APP_URL を書き換えるか、\n' +
-      'カレンダー側から ?return_url=カレンダーURL 付きで遷移すると自動で戻れます。'
-    );
-    return;
-  }
-
-  const targetUrl = new URL(targetBaseUrl);
-  targetUrl.searchParams.set('from', 'arcade_platform');
-  if (currentUser) {
-    targetUrl.searchParams.set('user_email', currentUser.email);
-  }
-  window.location.href = targetUrl.toString();
-}
-
-// ==========================================
-// 2. ユーザー認証ロジック
-// ==========================================
-async function checkSession() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    showPlatform();
-  }
-}
-
-async function handleSignUp() {
-  const email = document.getElementById('email-input').value.trim();
-  const password = document.getElementById('password-input').value.trim();
-  const username = document.getElementById('username-input').value.trim() || email.split('@')[0];
-  const msgEl = document.getElementById('auth-msg');
-
-  if (!email || password.length < 6) {
-    msgEl.textContent = '有効なメールアドレスと6文字以上のパスワードを入力してください。';
-    return;
-  }
-  msgEl.textContent = 'アカウントを作成中...';
-  const { data, error } = await supabaseClient.auth.signUp({
-    email, password, options: { data: { display_name: username } }
+// 1. ビュー切り替え（ロビー / マイページ / 概要）
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.view;
+    navBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    views.forEach(v => v.classList.toggle('active', v.id === `view-${target}`));
+    if (target === 'profile') refreshProfileStats();
   });
-  if (error) msgEl.textContent = '登録エラー: ' + error.message;
-  else { currentUser = data.user; showPlatform(); }
-}
+});
 
-async function handleLogin() {
-  const email = document.getElementById('email-input').value.trim();
-  const password = document.getElementById('password-input').value.trim();
-  const msgEl = document.getElementById('auth-msg');
-  msgEl.textContent = 'ログイン中...';
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) msgEl.textContent = 'ログインエラー: ' + error.message;
-  else { currentUser = data.user; showPlatform(); }
-}
+// 2. ゲーム選択切り替え（テトリス / ディアブロ）
+document.querySelectorAll('.game-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const selected = item.dataset.game;
+    if (selected === activeGame) return;
 
-async function handleLogout() {
-  stopAllGames();
-  await supabaseClient.auth.signOut();
-  currentUser = null;
-  document.getElementById('auth-view').classList.remove('hidden');
-  document.getElementById('platform-view').classList.add('hidden');
-  document.getElementById('user-bar').classList.add('hidden');
-  document.getElementById('top-nav-links').classList.add('hidden');
-}
-
-function showPlatform() {
-  const displayName = currentUser.user_metadata?.display_name || currentUser.email;
-  document.getElementById('user-display').textContent = `ようこそ、${displayName} さん`;
-  document.getElementById('profile-email').textContent = `メールアドレス：${currentUser.email} ｜ プレイヤー名：${displayName}`;
-  document.getElementById('auth-view').classList.add('hidden');
-  document.getElementById('platform-view').classList.remove('hidden');
-  document.getElementById('user-bar').classList.remove('hidden');
-  document.getElementById('top-nav-links').classList.remove('hidden');
-  selectGame('tetris');
-}
-
-// ==========================================
-// 3. ナビゲーション＆ゲーム切り替え
-// ==========================================
-function switchTopTab(tab) {
-  ['games', 'profile', 'about'].forEach(t => {
-    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
-    document.getElementById(`nav-${t}`).classList.toggle('active', t === tab);
+    document.querySelectorAll('.game-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    switchGame(selected);
   });
-  if (tab === 'profile') loadProfileStats();
-}
+});
 
-function stopAllGames() {
-  Object.values(window.ArcadeGames).forEach(gameModule => {
-    if (gameModule && typeof gameModule.stop === 'function') {
-      gameModule.stop();
-    }
-  });
-  const frame = document.getElementById('external-game-frame');
-  if (frame) frame.src = 'about:blank';
-}
-
-function selectGame(gameKey) {
-  stopAllGames();
+function switchGame(gameKey) {
   activeGame = gameKey;
-  switchTopTab('games');
+  window.ArcadeGames.tetris.stop();
 
-  GAME_KEYS.forEach(g => {
-    const menuEl = document.getElementById(`menu-${g}`);
-    if (menuEl) menuEl.classList.toggle('active', g === gameKey);
-  });
+  if (gameKey === 'tetris') {
+    document.getElementById('current-game-title').textContent = window.ArcadeGames.tetris.title;
+    document.getElementById('lb-title').textContent = window.ArcadeGames.tetris.rankTitle;
+    controlsHint.innerHTML = window.ArcadeGames.tetris.controlsHint;
 
-  const webGame = WEB_GAMES[gameKey];
-  const tetrisCanvas = document.getElementById('tetris-canvas');
-  const extWrapper = document.getElementById('external-frame-wrapper');
-  const extFrame = document.getElementById('external-game-frame');
-  const localStats = document.getElementById('local-stats-bar');
-  const startBtn = document.getElementById('start-btn');
-  const fsBtn = document.getElementById('fullscreen-btn');
-
-  localStats.classList.remove('hidden');
-  document.getElementById('score-val').textContent = '0';
-
-  if (!webGame) {
+    externalFrame.src = 'about:blank';
+    externalWrapper.classList.add('hidden');
+    cloudSavePanel.classList.add('hidden');
     tetrisCanvas.classList.remove('hidden');
-    extWrapper.classList.add('hidden');
-    fsBtn.classList.add('hidden');
-    startBtn.textContent = 'ゲーム開始';
+    localStatsBar.classList.remove('hidden');
+    startGameBtn.classList.remove('hidden');
 
-    const module = window.ArcadeGames[gameKey];
-    if (module) {
-      document.getElementById('current-game-title').textContent = module.title;
-      document.getElementById('rank-title').textContent = module.rankTitle;
-      document.getElementById('controls-hint').innerHTML = module.controlsHint;
-      if (typeof module.initIdle === 'function') module.initIdle();
-    }
-  } else {
+    window.ArcadeGames.tetris.initIdle();
+    loadLeaderboard('tetris');
+  } else if (gameKey === 'diablo') {
+    document.getElementById('current-game-title').textContent = '⚔️ ディアブロ I (Diablo Web)';
+    document.getElementById('lb-title').textContent = '⚔️ 冒険者クラウド記録';
+    controlsHint.innerHTML = '操作方法：画面内の <strong>Play Shareware</strong> をクリックして開始（マウス移動・攻撃 / 1〜8 スキル）';
+
     tetrisCanvas.classList.add('hidden');
-    extWrapper.classList.remove('hidden');
-    fsBtn.classList.remove('hidden');
-    startBtn.textContent = 'ゲーム再読込';
+    localStatsBar.classList.add('hidden');
+    startGameBtn.classList.add('hidden');
+    externalWrapper.classList.remove('hidden');
+    cloudSavePanel.classList.remove('hidden');
 
-    document.getElementById('current-game-title').textContent = webGame.title;
-    document.getElementById('rank-title').textContent = webGame.rankTitle;
-    document.getElementById('controls-hint').innerHTML = webGame.controlsHint;
-    extFrame.src = webGame.url;
+    externalFrame.src = './diablo/index.html';
+    checkCloudSaveStatus();
+    loadDiabloRecords();
   }
-
-  loadLeaderboard();
 }
 
-function startCurrentGame() {
-  if (WEB_GAMES[activeGame]) {
-    const extFrame = document.getElementById('external-game-frame');
-    extFrame.src = WEB_GAMES[activeGame].url;
+// 3. ゲーム開始ボタン（テトリス）
+startGameBtn.addEventListener('click', () => {
+  if (activeGame === 'tetris') {
     document.getElementById('score-val').textContent = '0';
-    return;
-  }
-
-  stopAllGames();
-  document.getElementById('score-val').textContent = '0';
-  document.getElementById('start-btn').textContent = 'リスタート';
-
-  const module = window.ArcadeGames[activeGame];
-  if (module && typeof module.start === 'function') {
-    module.start({
-      onScoreUpdate: (newScore) => {
-        document.getElementById('score-val').textContent = newScore;
+    window.ArcadeGames.tetris.start({
+      onScoreUpdate(score) {
+        document.getElementById('score-val').textContent = score;
       },
-      onGameOver: (finalScore) => {
-        document.getElementById('start-btn').textContent = 'もう一度プレイ';
-        setTimeout(() => {
-          alert(`ゲームオーバー！スコア: ${finalScore} 点`);
-          saveScoreToCloud(activeGame, finalScore);
-        }, 30);
+      async onGameOver(finalScore) {
+        alert(`ゲームオーバー！最終スコア: ${finalScore}`);
+        await submitScore('tetris', finalScore);
       }
     });
   }
-}
+});
 
-function toggleExternalFullscreen() {
-  const wrapper = document.getElementById('external-frame-wrapper');
-  if (wrapper && wrapper.requestFullscreen) {
-    wrapper.requestFullscreen();
-  }
-}
-
-// 独立HTML5ゲーム（パックマン等）からのスコア送信を受信
-window.addEventListener('message', async (event) => {
-  if (event.data && event.data.type === 'ARCADE_SCORE' && event.data.score > 0) {
-    const gameName = event.data.game || activeGame;
-    const finalScore = Number(event.data.score);
-    document.getElementById('score-val').textContent = finalScore;
-    await saveScoreToCloud(gameName, finalScore);
+// フルスクリーン切り替え
+document.getElementById('fullscreen-btn').addEventListener('click', () => {
+  const stage = document.querySelector('.stage-area');
+  if (!document.fullscreenElement) {
+    stage.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
   }
 });
 
-// ==========================================
-// 4. クラウドスコア保存 & ランキング取得
-// ==========================================
-async function saveScoreToCloud(gameName, finalScore) {
-  if (!currentUser || finalScore <= 0) return;
-  const displayName = currentUser.user_metadata?.display_name || currentUser.email.split('@')[0];
-
-  const { error } = await supabaseClient
-    .from('tetris_scores')
-    .insert([{
-      user_id: currentUser.id,
-      username: displayName,
-      score: finalScore,
-      game_name: gameName
-    }]);
-
-  if (!error) loadLeaderboard();
-}
-
-async function loadLeaderboard() {
-  const listEl = document.getElementById('rank-list');
-  const { data, error } = await supabaseClient
-    .from('tetris_scores')
-    .select('username, score')
-    .eq('game_name', activeGame)
-    .order('score', { ascending: false })
-    .limit(10);
-
-  if (error) {
-    listEl.innerHTML = `<li class="rank-item">読み込みエラー</li>`;
+// 4. Supabase Storage クラウドセーブ機能（ディアブロ .sv ファイル同期）
+async function checkCloudSaveStatus() {
+  const statusEl = document.getElementById('cloud-save-status');
+  if (!currentUser) {
+    statusEl.textContent = '※ ログインするとクラウド保存が利用できます';
+    statusEl.style.color = '#facc15';
     return;
   }
 
-  if (!data || data.length === 0) {
-    listEl.innerHTML = `<li class="rank-item" style="color:var(--muted);">まだ記録がありません</li>`;
+  const { data, error } = await window.sbClient
+    .from('game_saves')
+    .select('updated_at, char_name')
+    .eq('user_id', currentUser.id)
+    .eq('game_name', 'diablo')
+    .maybeSingle();
+
+  if (data) {
+    const timeStr = new Date(data.updated_at).toLocaleString('ja-JP');
+    statusEl.textContent = `✅ 同期済み (${data.char_name} / ${timeStr})`;
+    statusEl.style.color = '#4ade80';
   } else {
-    listEl.innerHTML = data.map((row, idx) => `
-      <li class="rank-item">
-        <span>#${idx + 1} ${escapeHtml(row.username)}</span>
-        <strong>${row.score} 点</strong>
-      </li>
-    `).join('');
+    statusEl.textContent = 'クラウドデータなし（未アップロード）';
+    statusEl.style.color = '#94a3b8';
+  }
+}
+
+document.getElementById('upload-save-btn').addEventListener('click', async () => {
+  if (!currentUser) {
+    alert('クラウド保存にはログインが必要です！');
+    authModal.classList.remove('hidden');
+    return;
+  }
+  const fileInput = document.getElementById('sv-file-input');
+  const file = fileInput.files[0];
+  if (!file) {
+    alert('先にアップロードするセーブファイル（.sv）を選択してください。');
+    return;
   }
 
-  if (currentUser) {
-    const { data: myData } = await supabaseClient
-      .from('tetris_scores')
-      .select('score')
-      .eq('user_id', currentUser.id)
-      .eq('game_name', activeGame)
-      .order('score', { ascending: false })
-      .limit(1);
+  const statusEl = document.getElementById('cloud-save-status');
+  statusEl.textContent = '⏳ アップロード中...';
 
-    const best = (myData && myData.length > 0) ? myData[0].score : 0;
+  const filePath = `${currentUser.id}/${file.name}`;
+  const { error: uploadError } = await window.sbClient.storage
+    .from('save-files')
+    .upload(filePath, file, { upsert: true });
+
+  if (uploadError) {
+    statusEl.textContent = '❌ アップロード失敗: ' + uploadError.message;
+    statusEl.style.color = '#ef4444';
+    return;
+  }
+
+  // メタデータを game_saves テーブルにも記録
+  await window.sbClient.from('game_saves').upsert({
+    user_id: currentUser.id,
+    game_name: 'diablo',
+    char_name: file.name,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id,game_name' });
+
+  statusEl.textContent = `✅ クラウド保存完了 (${file.name})`;
+  statusEl.style.color = '#4ade80';
+  loadDiabloRecords();
+});
+
+document.getElementById('download-save-btn').addEventListener('click', async () => {
+  if (!currentUser) {
+    alert('クラウド復元にはログインが必要です！');
+    authModal.classList.remove('hidden');
+    return;
+  }
+
+  const { data: saveMeta } = await window.sbClient
+    .from('game_saves')
+    .select('char_name')
+    .eq('user_id', currentUser.id)
+    .eq('game_name', 'diablo')
+    .maybeSingle();
+
+  if (!saveMeta || !saveMeta.char_name) {
+    alert('クラウド上に保存されたセーブファイルが見つかりません。');
+    return;
+  }
+
+  const filePath = `${currentUser.id}/${saveMeta.char_name}`;
+  const { data: blob, error } = await window.sbClient.storage
+    .from('save-files')
+    .download(filePath);
+
+  if (error || !blob) {
+    alert('ダウンロードに失敗しました: ' + (error ? error.message : ''));
+    return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = saveMeta.char_name;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+async function loadDiabloRecords() {
+  const listEl = document.getElementById('leaderboard-list');
+  listEl.innerHTML = '<li class="loading">クラウド記録を取得中...</li>';
+
+  const { data } = await window.sbClient
+    .from('game_saves')
+    .select('char_name, updated_at')
+    .eq('game_name', 'diablo')
+    .order('updated_at', { ascending: false })
+    .limit(10);
+
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<li class="loading">まだクラウドセーブ記録がありません</li>';
+    return;
+  }
+
+  listEl.innerHTML = data.map((row, idx) => {
+    const dt = new Date(row.updated_at).toLocaleDateString('ja-JP');
+    return `
+      <li class="lb-row">
+        <span><strong>#${idx + 1}</strong> ⚔️ ${row.char_name}</span>
+        <span style="color:#38bdf8;">${dt}</span>
+      </li>
+    `;
+  }).join('');
+}
+
+// 5. スコア送信＆ランキング取得（テトリス）
+async function submitScore(game, score) {
+  if (!currentUser || score <= 0) return;
+  const username = currentUser.email.split('@')[0];
+
+  if (game === 'tetris') {
+    await window.sbClient.from('tetris_scores').insert({
+      user_id: currentUser.id,
+      username,
+      score
+    });
+  }
+  loadLeaderboard(game);
+}
+
+async function loadLeaderboard(game) {
+  if (game === 'diablo') {
+    loadDiabloRecords();
+    return;
+  }
+  const listEl = document.getElementById('leaderboard-list');
+  listEl.innerHTML = '<li class="loading">読み込み中...</li>';
+
+  const { data, error } = await window.sbClient
+    .from('tetris_scores')
+    .select('username, score')
+    .order('score', { ascending: false })
+    .limit(10);
+
+  if (error || !data || data.length === 0) {
+    listEl.innerHTML = '<li class="loading">まだ記録がありません</li>';
+    return;
+  }
+
+  listEl.innerHTML = data.map((row, idx) => {
+    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
+    return `
+      <li class="lb-row">
+        <span><strong>${medal}</strong> ${row.username}</span>
+        <span class="lb-score">${row.score}</span>
+      </li>
+    `;
+  }).join('');
+
+  if (currentUser) {
+    const myName = currentUser.email.split('@')[0];
+    const myScores = data.filter(d => d.username === myName).map(d => d.score);
+    const best = myScores.length ? Math.max(...myScores) : 0;
     document.getElementById('best-val').textContent = best;
   }
 }
 
-async function loadProfileStats() {
-  if (!currentUser) return;
-  for (const g of GAME_KEYS) {
-    const { data } = await supabaseClient
-      .from('tetris_scores')
-      .select('score')
-      .eq('user_id', currentUser.id)
-      .eq('game_name', g)
-      .order('score', { ascending: false })
-      .limit(1);
-    const best = (data && data.length > 0) ? data[0].score : 0;
-    const el = document.getElementById(`profile-${g}-best`);
-    if (el) el.textContent = `${best} 点`;
-  }
-}
+document.getElementById('refresh-lb-btn').addEventListener('click', () => loadLeaderboard(activeGame));
 
-function escapeHtml(str) {
-  return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-}
+// 6. 認証・セッション管理
+document.getElementById('auth-toggle-btn').addEventListener('click', () => authModal.classList.remove('hidden'));
+document.getElementById('close-modal').addEventListener('click', () => authModal.classList.add('hidden'));
 
-// PCキーボードの矢印キー・WASDを確実にゲーム内iframeへ転送
-window.addEventListener('keydown', (e) => {
-  if (activeGame === 'pacman') {
-    const keyMap = {
-      ArrowUp: 'UP', w: 'UP', W: 'UP',
-      ArrowDown: 'DOWN', s: 'DOWN', S: 'DOWN',
-      ArrowLeft: 'LEFT', a: 'LEFT', A: 'LEFT',
-      ArrowRight: 'RIGHT', d: 'RIGHT', D: 'RIGHT'
-    };
-    if (keyMap[e.key]) {
-      e.preventDefault();
-      const frame = document.getElementById('external-game-frame');
-      if (frame && frame.contentWindow) {
-        frame.contentWindow.focus();
-        frame.contentWindow.postMessage({ type: 'SET_DIR', dir: keyMap[e.key] }, '*');
-      }
-    }
+document.getElementById('login-submit').addEventListener('click', async () => {
+  const email = document.getElementById('email-input').value.trim();
+  const password = document.getElementById('password-input').value;
+  authMessage.textContent = '処理中...';
+  const { error } = await window.sbClient.auth.signInWithPassword({ email, password });
+  if (error) authMessage.textContent = 'エラー: ' + error.message;
+  else {
+    authModal.classList.add('hidden');
+    checkSession();
   }
 });
 
+document.getElementById('signup-submit').addEventListener('click', async () => {
+  const email = document.getElementById('email-input').value.trim();
+  const password = document.getElementById('password-input').value;
+  authMessage.textContent = '登録中...';
+  const { error } = await window.sbClient.auth.signUp({ email, password });
+  if (error) authMessage.textContent = 'エラー: ' + error.message;
+  else authMessage.textContent = '登録完了！そのままログインしてください。';
+});
+
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await window.sbClient.auth.signOut();
+  checkSession();
+});
+
+async function checkSession() {
+  const { data: { session } } = await window.sbClient.auth.getSession();
+  currentUser = session ? session.user : null;
+
+  const greeting = document.getElementById('user-greeting');
+  const authBtn = document.getElementById('auth-toggle-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  if (currentUser) {
+    greeting.textContent = `ようこそ、${currentUser.email.split('@')[0]} さん`;
+    authBtn.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+  } else {
+    greeting.textContent = 'ゲストモード';
+    authBtn.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+  }
+  loadLeaderboard(activeGame);
+  if (activeGame === 'diablo') checkCloudSaveStatus();
+}
+
+async function refreshProfileStats() {
+  const guestBox = document.getElementById('profile-guest-notice');
+  const detailBox = document.getElementById('profile-details');
+
+  if (!currentUser) {
+    guestBox.classList.remove('hidden');
+    detailBox.classList.add('hidden');
+    return;
+  }
+
+  guestBox.classList.add('hidden');
+  detailBox.classList.remove('hidden');
+  document.getElementById('prof-email').textContent = currentUser.email;
+
+  const { data: tData } = await window.sbClient
+    .from('tetris_scores')
+    .select('score')
+    .eq('user_id', currentUser.id)
+    .order('score', { ascending: false })
+    .limit(1);
+
+  const { data: sData } = await window.sbClient
+    .from('game_saves')
+    .select('char_name')
+    .eq('user_id', currentUser.id)
+    .eq('game_name', 'diablo')
+    .maybeSingle();
+
+  document.getElementById('prof-tetris-best').textContent = (tData && tData[0]) ? tData[0].score : 0;
+  document.getElementById('prof-save-status').textContent = sData ? `保存済み (${sData.char_name})` : '未保存';
+}
+
+// 初期起動
+controlsHint.innerHTML = window.ArcadeGames.tetris.controlsHint;
+window.ArcadeGames.tetris.initIdle();
 checkSession();
