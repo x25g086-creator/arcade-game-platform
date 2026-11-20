@@ -151,6 +151,7 @@
     const ctx = canvas.getContext('2d');
     const TILE = 16; // 28 x 31 grid = 448 x 496
 
+    // 1=Wall, 0=Dot, 2=Empty, 3=Power Pellet, 4=Ghost House Door
     const BASE_MAP = [
       "1111111111111111111111111111",
       "1000000000000110000000000001",
@@ -219,7 +220,7 @@
       NONE:  { x: 0, y: 0 }
     };
 
-    const player = { x: 13.5, y: 23, dir: DIRS.NONE, nextDir: DIRS.NONE, speed: 0.11, mouth: 0 };
+    const player = { x: 14, y: 23, dir: DIRS.LEFT, nextDir: DIRS.LEFT, speed: 0.11, mouth: 0 };
     let ghosts = [];
 
     function initMap() {
@@ -232,24 +233,25 @@
     }
 
     function resetPositions() {
-      player.x = 13.5;
+      // 整数座標から即座に左へ発進させる（半マス停止バグ解消）
+      player.x = 14;
       player.y = 23;
-      player.dir = DIRS.NONE;
-      player.nextDir = DIRS.NONE;
+      player.dir = DIRS.LEFT;
+      player.nextDir = DIRS.LEFT;
       frightTimer = 0;
 
       const baseSpeed = Math.min(0.095 + (level - 1) * 0.008, 0.13);
       ghosts = [
-        { name: 'Blinky', x: 13.5, y: 11, dir: DIRS.LEFT,  color: '#ef4444', speed: baseSpeed },
-        { name: 'Pinky',  x: 13.5, y: 14, dir: DIRS.UP,    color: '#f472b6', speed: baseSpeed * 0.96 },
-        { name: 'Inky',   x: 11.5, y: 14, dir: DIRS.UP,    color: '#38bdf8', speed: baseSpeed * 0.93 },
-        { name: 'Clyde',  x: 15.5, y: 14, dir: DIRS.UP,    color: '#fb923c', speed: baseSpeed * 0.90 }
+        { name: 'Blinky', x: 14, y: 11, dir: DIRS.LEFT,  color: '#ef4444', speed: baseSpeed },
+        { name: 'Pinky',  x: 14, y: 14, dir: DIRS.UP,    color: '#f472b6', speed: baseSpeed * 0.96 },
+        { name: 'Inky',   x: 12, y: 14, dir: DIRS.UP,    color: '#38bdf8', speed: baseSpeed * 0.93 },
+        { name: 'Clyde',  x: 15, y: 14, dir: DIRS.UP,    color: '#fb923c', speed: baseSpeed * 0.90 }
       ];
     }
 
     function canMove(gx, gy, dir, isGhost = false) {
-      const nx = Math.round(gx + dir.x * 0.55);
-      const ny = Math.round(gy + dir.y * 0.55);
+      const nx = Math.round(gx + dir.x * 0.6);
+      const ny = Math.round(gy + dir.y * 0.6);
       if (ny < 0 || ny >= map.length) return false;
       if (nx < 0 || nx >= map[0].length) return ny === 14;
       const cell = map[ny][nx];
@@ -261,13 +263,23 @@
     function updatePlayer() {
       const cx = Math.round(player.x);
       const cy = Math.round(player.y);
-      if (Math.abs(player.x - cx) < 0.16 && Math.abs(player.y - cy) < 0.16) {
+
+      // 逆方向への切り返しはグリッド中心を待たずに即座に反応
+      if (player.nextDir !== DIRS.NONE &&
+          player.nextDir.x === -player.dir.x &&
+          player.nextDir.y === -player.dir.y) {
+        player.dir = player.nextDir;
+      }
+
+      if (Math.abs(player.x - cx) < 0.25 && Math.abs(player.y - cy) < 0.25) {
         if (player.nextDir !== DIRS.NONE && canMove(cx, cy, player.nextDir, false)) {
           player.x = cx;
           player.y = cy;
           player.dir = player.nextDir;
         }
         if (!canMove(cx, cy, player.dir, false)) {
+          player.x = cx;
+          player.y = cy;
           player.dir = DIRS.NONE;
         }
       }
@@ -315,7 +327,7 @@
         const cy = Math.round(g.y);
         const spd = frightTimer > 0 ? g.speed * 0.6 : g.speed;
 
-        if (Math.abs(g.x - cx) < 0.14 && Math.abs(g.y - cy) < 0.14) {
+        if (Math.abs(g.x - cx) < 0.2 && Math.abs(g.y - cy) < 0.2) {
           const options = [DIRS.UP, DIRS.LEFT, DIRS.DOWN, DIRS.RIGHT].filter(d => {
             if (d.x === -g.dir.x && d.y === -g.dir.y) return false;
             return canMove(cx, cy, d, true);
@@ -351,7 +363,7 @@
             score += 200;
             document.getElementById('score').textContent = score;
             beep(780, 0.2, 'sawtooth', 0.06);
-            g.x = 13.5;
+            g.x = 14;
             g.y = 14;
             g.dir = DIRS.UP;
           } else {
@@ -401,8 +413,9 @@
 
       const pcx = player.x * TILE + TILE / 2;
       const pcy = player.y * TILE + TILE / 2;
-      let angle = 0;
-      if (player.dir === DIRS.DOWN) angle = Math.PI / 2;
+      let angle = Math.PI;
+      if (player.dir === DIRS.RIGHT) angle = 0;
+      else if (player.dir === DIRS.DOWN) angle = Math.PI / 2;
       else if (player.dir === DIRS.LEFT) angle = Math.PI;
       else if (player.dir === DIRS.UP) angle = -Math.PI / 2;
       const bite = Math.abs(Math.sin(player.mouth)) * 0.35;
@@ -487,7 +500,7 @@
       }
     }
 
-    // 外层主页面直接转发的方向指令（彻底解决iframe焦点丢失问题）
+    // 0. 親ウィンドウからの方向キー転送を受信
     window.addEventListener('message', (e) => {
       if (e.data && e.data.type === 'SET_DIR') {
         setDirection(e.data.dir);
@@ -537,7 +550,6 @@
       }
     }, { passive: true });
 
-    // クリック時に必ずフォーカスを戻す
     document.body.addEventListener('click', () => window.focus());
     document.getElementById('start-btn').addEventListener('click', startGame);
 
