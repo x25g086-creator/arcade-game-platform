@@ -16,17 +16,24 @@ const startGameBtn = document.getElementById('start-game-btn');
 const controlsHint = document.getElementById('controls-hint');
 const cloudSavePanel = document.getElementById('cloud-save-panel');
 
+// 统一视图切换函数：同一时间只显示 1 个独立界面（大厅 / 登录页 / 个人中心 / 系统概要）
+function showOnlyView(viewName) {
+  lobbyView.classList.toggle('hidden', viewName !== 'lobby');
+  profileView.classList.toggle('hidden', viewName !== 'profile');
+  aboutView.classList.toggle('hidden', viewName !== 'about');
+  authModal.classList.toggle('hidden', viewName !== 'auth');
+
+  navBtns.forEach(b => {
+    b.classList.toggle('active', b.dataset.view === viewName);
+  });
+
+  if (viewName === 'profile') refreshProfileStats();
+}
+
 // 1. 顶部视图切换
 navBtns.forEach(btn => {
   btn.addEventListener('click', () => {
-    const target = btn.dataset.view;
-    navBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    lobbyView.classList.toggle('hidden', target !== 'lobby');
-    profileView.classList.toggle('hidden', target !== 'profile');
-    aboutView.classList.toggle('hidden', target !== 'about');
-    if (target === 'profile') refreshProfileStats();
+    showOnlyView(btn.dataset.view);
   });
 });
 
@@ -128,7 +135,7 @@ async function checkCloudSaveStatus() {
 document.getElementById('upload-save-btn').addEventListener('click', async () => {
   if (!currentUser) {
     alert('クラウド保存にはログインが必要です！');
-    authModal.classList.remove('hidden');
+    showOnlyView('auth');
     return;
   }
   const file = document.getElementById('sv-file-input').files[0];
@@ -166,7 +173,7 @@ document.getElementById('upload-save-btn').addEventListener('click', async () =>
 document.getElementById('download-save-btn').addEventListener('click', async () => {
   if (!currentUser) {
     alert('クラウド復元にはログインが必要です！');
-    authModal.classList.remove('hidden');
+    showOnlyView('auth');
     return;
   }
 
@@ -276,18 +283,25 @@ async function loadLeaderboard(game) {
 
 document.getElementById('refresh-lb-btn').addEventListener('click', () => loadLeaderboard(activeGame));
 
-// 6. 登录/注册认证
-document.getElementById('auth-toggle-btn').addEventListener('click', () => authModal.classList.toggle('hidden'));
-document.getElementById('close-modal').addEventListener('click', () => authModal.classList.add('hidden'));
+// 6. 独立登录视图切换与认证
+document.getElementById('auth-toggle-btn').addEventListener('click', () => {
+  authMessage.textContent = '';
+  showOnlyView('auth');
+});
+
+document.getElementById('close-modal').addEventListener('click', () => {
+  showOnlyView('lobby');
+});
 
 document.getElementById('login-submit').addEventListener('click', async () => {
   const email = document.getElementById('email-input').value.trim();
   const password = document.getElementById('password-input').value;
   authMessage.textContent = '処理中...';
   const { error } = await window.sbClient.auth.signInWithPassword({ email, password });
-  if (error) authMessage.textContent = 'エラー: ' + error.message;
-  else {
-    authModal.classList.add('hidden');
+  if (error) {
+    authMessage.textContent = 'エラー: ' + error.message;
+  } else {
+    showOnlyView('lobby');
     checkSession();
   }
 });
