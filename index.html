@@ -27,14 +27,14 @@
     </div>
   </header>
 
-  <!-- 登录/注册视图弹窗 -->
-  <div id="auth-modal" class="auth-box hidden">
+  <!-- 独立视图 1：登录 / 注册页面 -->
+  <div id="auth-view" class="auth-box hidden">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h2>アカウントログイン</h2>
-      <button id="close-modal" class="secondary" style="padding:4px 10px;">✕</button>
+      <button id="close-auth-btn" class="secondary" style="padding:4px 10px;">✕ 戻る</button>
     </div>
     <p style="font-size:0.85rem; color:var(--muted); margin-bottom:14px;">
-      ログインするとスコア・クラウドセーブが保存されます。
+      登録済みのメールアドレスとパスワードでそのままログインできます。
     </p>
     <div class="form-group">
       <label>メールアドレス</label>
@@ -46,74 +46,43 @@
     </div>
     <div style="display:flex; gap:10px;">
       <button id="login-submit" class="primary" style="flex:1;">ログイン</button>
-      <button id="signup-submit" class="secondary" style="flex:1;">新規作成</button>
+      <button id="signup-submit" class="secondary" style="flex:1;">新規登録</button>
     </div>
     <p id="auth-message" class="msg"></p>
   </div>
 
-  <!-- 主视图 1：游戏大厅 -->
+  <!-- 独立视图 2：游戏大厅（テトリス） -->
   <main id="view-lobby" class="main-layout">
-    <!-- 左侧菜单 -->
     <aside class="card">
       <div class="sidebar-title">ゲームカタログ</div>
       <ul class="menu-list">
         <li class="menu-item active" data-game="tetris">🧱 テトリス</li>
-        <li class="menu-item" data-game="diablo">⚔️ ディアブロ I (Diablo)</li>
       </ul>
-
-      <div style="margin-top:18px; padding:12px; background:#0f172a; border-radius:8px; border:1px solid #334155; font-size:0.8rem; color:var(--muted);">
-        <strong style="color:var(--accent); display:block; margin-bottom:4px;">☁️ Supabase Cloud Sync</strong>
-        スコア・キャラクターセーブデータ(.sv)をクラウドへ自動同期します。
-      </div>
     </aside>
 
-    <!-- 中央舞台 -->
     <section class="card game-stage">
       <div class="stage-header">
-        <h2 id="current-game-title">🧱 テトリス (Tetris)</h2>
+        <h2>🧱 テトリス (Tetris)</h2>
         <div style="display:flex; gap:8px;">
           <button id="fullscreen-btn" class="secondary">⛶ 全画面</button>
           <button id="start-game-btn" class="primary">ゲーム開始</button>
         </div>
       </div>
 
-      <!-- 俄罗斯方块分数栏 -->
-      <div id="local-stats-bar" class="stats-bar">
+      <div class="stats-bar">
         <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
         <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
       </div>
 
-      <!-- 俄罗斯方块画布 -->
       <canvas id="tetris-canvas" width="240" height="400"></canvas>
-
-      <!-- 暗黑破坏神 1 内嵌 4:3 大屏 -->
-      <div id="external-frame-wrapper" class="external-wrapper hidden">
-        <iframe id="external-game-frame" src="about:blank" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe>
+      <div id="controls-hint" class="controls-hint">
+        操作方法：← → 移動 / ↑ 回転 / ↓ 落下加速 / スペース 一気に落下
       </div>
-
-      <!-- 暗黑破坏神 1 专用 Supabase 云存档面板 -->
-      <div id="cloud-save-panel" class="hidden" style="width:100%; margin-top:12px; padding:12px; background:#0f172a; border:1px solid #334155; border-radius:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-          <strong style="color:var(--accent); font-size:0.88rem;">☁️ Supabase クラウドセーブ管理 (.sv)</strong>
-          <span id="cloud-save-status" style="font-size:0.8rem; color:var(--muted);">未同期</span>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          <input type="file" id="sv-file-input" accept=".sv,.bin" style="font-size:0.8rem; max-width:210px; padding:6px;" />
-          <button id="upload-save-btn" class="primary" style="padding:6px 12px; font-size:0.82rem;">⬆ クラウドへ保存</button>
-          <button id="download-save-btn" class="secondary" style="padding:6px 12px; font-size:0.82rem;">⬇ クラウドから復元</button>
-        </div>
-        <p style="font-size:0.76rem; color:var(--muted); margin-top:6px;">
-          ※ ゲーム内の「Manage Saves」から書き出したセーブファイル（.sv）をクラウドに保管・別端末へ復元できます。
-        </p>
-      </div>
-
-      <div id="controls-hint" class="controls-hint"></div>
     </section>
 
-    <!-- 右侧排行榜 -->
     <aside class="card">
       <div class="rank-header">
-        <h3 id="lb-title">🏆 テトリス ランキング</h3>
+        <h3>🏆 テトリス ランキング</h3>
         <button id="refresh-lb-btn" class="secondary" style="padding:4px 10px; font-size:0.8rem;">更新</button>
       </div>
       <ul id="leaderboard-list" class="rank-list">
@@ -122,7 +91,7 @@
     </aside>
   </main>
 
-  <!-- 主视图 2：个人中心 -->
+  <!-- 独立视图 3：个人中心 -->
   <section id="view-profile" class="card hidden" style="max-width:900px; margin:24px auto; width:92%;">
     <h2>👤 プレイヤープロフィール＆戦績</h2>
     <div id="profile-guest-notice" style="margin-top:12px; padding:12px; background:#0f172a; border-radius:8px; color:#fbbf24; font-size:0.9rem;">
@@ -137,18 +106,14 @@
         <div class="stat-label">テトリス最高得点</div>
         <div id="prof-tetris-best" class="stat-num" style="color:var(--green);">0</div>
       </div>
-      <div class="stat-box">
-        <div class="stat-label">ディアブロ クラウド記録</div>
-        <div id="prof-save-status" class="stat-num" style="font-size:1.05rem; color:var(--accent);">未保存</div>
-      </div>
     </div>
   </section>
 
-  <!-- 主视图 3：系统概要 -->
+  <!-- 独立视图 4：系统概要 -->
   <section id="view-about" class="card hidden" style="max-width:900px; margin:24px auto; width:92%;">
     <h2>📖 システム概要</h2>
     <p style="margin-top:10px; color:var(--muted); font-size:0.92rem;">
-      ブラウザのみで動作するプラグイン型アーケード＆WebAssembly（Diablo Web）実行基盤と、Supabase BaaSによる認証・ランキング・クラウドセーブ同期システムです。
+      ブラウザのみで動作するクラウドアーケードプラットフォーム。Supabase Auth・PostgreSQL・Storageによりアカウント認証とランキング同期を実現しています。
     </p>
   </section>
 
