@@ -304,4 +304,24 @@ function escapeHtml(str) {
   return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 }
 
+// PCキーボードの矢印キー・WASDを確実にゲーム内iframeへ転送
+window.addEventListener('keydown', (e) => {
+  if (activeGame === 'pacman') {
+    const keyMap = {
+      ArrowUp: 'UP', w: 'UP', W: 'UP',
+      ArrowDown: 'DOWN', s: 'DOWN', S: 'DOWN',
+      ArrowLeft: 'LEFT', a: 'LEFT', A: 'LEFT',
+      ArrowRight: 'RIGHT', d: 'RIGHT', D: 'RIGHT'
+    };
+    if (keyMap[e.key]) {
+      e.preventDefault();
+      const frame = document.getElementById('external-game-frame');
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.focus();
+        frame.contentWindow.postMessage({ type: 'SET_DIR', dir: keyMap[e.key] }, '*');
+      }
+    }
+  }
+});
+
 checkSession();
