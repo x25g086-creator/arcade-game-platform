@@ -1,8 +1,9 @@
 let currentUser = null;
 let activeGame = 'tetris';
 
-// DOM参照
-const views = document.querySelectorAll('.view-container');
+const lobbyView = document.getElementById('view-lobby');
+const profileView = document.getElementById('view-profile');
+const aboutView = document.getElementById('view-about');
 const navBtns = document.querySelectorAll('.nav-btn[data-view]');
 const authModal = document.getElementById('auth-modal');
 const authMessage = document.getElementById('auth-message');
@@ -15,24 +16,27 @@ const startGameBtn = document.getElementById('start-game-btn');
 const controlsHint = document.getElementById('controls-hint');
 const cloudSavePanel = document.getElementById('cloud-save-panel');
 
-// 1. ビュー切り替え（ロビー / マイページ / 概要）
+// 1. 顶部视图切换
 navBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const target = btn.dataset.view;
     navBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    views.forEach(v => v.classList.toggle('active', v.id === `view-${target}`));
+
+    lobbyView.classList.toggle('hidden', target !== 'lobby');
+    profileView.classList.toggle('hidden', target !== 'profile');
+    aboutView.classList.toggle('hidden', target !== 'about');
     if (target === 'profile') refreshProfileStats();
   });
 });
 
-// 2. ゲーム選択切り替え（テトリス / ディアブロ）
-document.querySelectorAll('.game-item').forEach(item => {
+// 2. 左侧游戏目录切换
+document.querySelectorAll('.menu-item').forEach(item => {
   item.addEventListener('click', () => {
     const selected = item.dataset.game;
     if (selected === activeGame) return;
 
-    document.querySelectorAll('.game-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
     item.classList.add('active');
     switchGame(selected);
   });
@@ -73,7 +77,7 @@ function switchGame(gameKey) {
   }
 }
 
-// 3. ゲーム開始ボタン（テトリス）
+// 3. 俄罗斯方块开始与全屏
 startGameBtn.addEventListener('click', () => {
   if (activeGame === 'tetris') {
     document.getElementById('score-val').textContent = '0';
@@ -89,26 +93,22 @@ startGameBtn.addEventListener('click', () => {
   }
 });
 
-// フルスクリーン切り替え
 document.getElementById('fullscreen-btn').addEventListener('click', () => {
-  const stage = document.querySelector('.stage-area');
-  if (!document.fullscreenElement) {
-    stage.requestFullscreen().catch(() => {});
-  } else {
-    document.exitFullscreen();
-  }
+  const stage = document.querySelector('.game-stage');
+  if (!document.fullscreenElement) stage.requestFullscreen().catch(() => {});
+  else document.exitFullscreen();
 });
 
-// 4. Supabase Storage クラウドセーブ機能（ディアブロ .sv ファイル同期）
+// 4. Supabase Storage 云存档上传与恢复
 async function checkCloudSaveStatus() {
   const statusEl = document.getElementById('cloud-save-status');
   if (!currentUser) {
     statusEl.textContent = '※ ログインするとクラウド保存が利用できます';
-    statusEl.style.color = '#facc15';
+    statusEl.style.color = '#fbbf24';
     return;
   }
 
-  const { data, error } = await window.sbClient
+  const { data } = await window.sbClient
     .from('game_saves')
     .select('updated_at, char_name')
     .eq('user_id', currentUser.id)
@@ -120,7 +120,7 @@ async function checkCloudSaveStatus() {
     statusEl.textContent = `✅ 同期済み (${data.char_name} / ${timeStr})`;
     statusEl.style.color = '#4ade80';
   } else {
-    statusEl.textContent = 'クラウドデータなし（未アップロード）';
+    statusEl.textContent = 'クラウドデータなし（未保存）';
     statusEl.style.color = '#94a3b8';
   }
 }
@@ -131,8 +131,7 @@ document.getElementById('upload-save-btn').addEventListener('click', async () =>
     authModal.classList.remove('hidden');
     return;
   }
-  const fileInput = document.getElementById('sv-file-input');
-  const file = fileInput.files[0];
+  const file = document.getElementById('sv-file-input').files[0];
   if (!file) {
     alert('先にアップロードするセーブファイル（.sv）を選択してください。');
     return;
@@ -147,12 +146,11 @@ document.getElementById('upload-save-btn').addEventListener('click', async () =>
     .upload(filePath, file, { upsert: true });
 
   if (uploadError) {
-    statusEl.textContent = '❌ アップロード失敗: ' + uploadError.message;
+    statusEl.textContent = '❌ 失敗: ' + uploadError.message;
     statusEl.style.color = '#ef4444';
     return;
   }
 
-  // メタデータを game_saves テーブルにも記録
   await window.sbClient.from('game_saves').upsert({
     user_id: currentUser.id,
     game_name: 'diablo',
@@ -184,13 +182,12 @@ document.getElementById('download-save-btn').addEventListener('click', async () 
     return;
   }
 
-  const filePath = `${currentUser.id}/${saveMeta.char_name}`;
   const { data: blob, error } = await window.sbClient.storage
     .from('save-files')
-    .download(filePath);
+    .download(`${currentUser.id}/${saveMeta.char_name}`);
 
   if (error || !blob) {
-    alert('ダウンロードに失敗しました: ' + (error ? error.message : ''));
+    alert('ダウンロード失敗: ' + (error ? error.message : ''));
     return;
   }
 
@@ -204,7 +201,7 @@ document.getElementById('download-save-btn').addEventListener('click', async () 
 
 async function loadDiabloRecords() {
   const listEl = document.getElementById('leaderboard-list');
-  listEl.innerHTML = '<li class="loading">クラウド記録を取得中...</li>';
+  listEl.innerHTML = '<li class="rank-item"><span>取得中...</span></li>';
 
   const { data } = await window.sbClient
     .from('game_saves')
@@ -214,33 +211,30 @@ async function loadDiabloRecords() {
     .limit(10);
 
   if (!data || data.length === 0) {
-    listEl.innerHTML = '<li class="loading">まだクラウドセーブ記録がありません</li>';
+    listEl.innerHTML = '<li class="rank-item"><span>まだクラウド記録がありません</span></li>';
     return;
   }
 
   listEl.innerHTML = data.map((row, idx) => {
     const dt = new Date(row.updated_at).toLocaleDateString('ja-JP');
     return `
-      <li class="lb-row">
-        <span><strong>#${idx + 1}</strong> ⚔️ ${row.char_name}</span>
-        <span style="color:#38bdf8;">${dt}</span>
+      <li class="rank-item">
+        <span>#${idx + 1} ⚔️ ${row.char_name}</span>
+        <strong style="color:var(--accent);">${dt}</strong>
       </li>
     `;
   }).join('');
 }
 
-// 5. スコア送信＆ランキング取得（テトリス）
+// 5. 排行榜
 async function submitScore(game, score) {
   if (!currentUser || score <= 0) return;
   const username = currentUser.email.split('@')[0];
-
-  if (game === 'tetris') {
-    await window.sbClient.from('tetris_scores').insert({
-      user_id: currentUser.id,
-      username,
-      score
-    });
-  }
+  await window.sbClient.from('tetris_scores').insert({
+    user_id: currentUser.id,
+    username,
+    score
+  });
   loadLeaderboard(game);
 }
 
@@ -250,7 +244,7 @@ async function loadLeaderboard(game) {
     return;
   }
   const listEl = document.getElementById('leaderboard-list');
-  listEl.innerHTML = '<li class="loading">読み込み中...</li>';
+  listEl.innerHTML = '<li class="rank-item"><span>読み込み中...</span></li>';
 
   const { data, error } = await window.sbClient
     .from('tetris_scores')
@@ -259,16 +253,16 @@ async function loadLeaderboard(game) {
     .limit(10);
 
   if (error || !data || data.length === 0) {
-    listEl.innerHTML = '<li class="loading">まだ記録がありません</li>';
+    listEl.innerHTML = '<li class="rank-item"><span>まだ記録がありません</span></li>';
     return;
   }
 
   listEl.innerHTML = data.map((row, idx) => {
     const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
     return `
-      <li class="lb-row">
-        <span><strong>${medal}</strong> ${row.username}</span>
-        <span class="lb-score">${row.score}</span>
+      <li class="rank-item">
+        <span>${medal} ${row.username}</span>
+        <strong>${row.score}</strong>
       </li>
     `;
   }).join('');
@@ -276,15 +270,14 @@ async function loadLeaderboard(game) {
   if (currentUser) {
     const myName = currentUser.email.split('@')[0];
     const myScores = data.filter(d => d.username === myName).map(d => d.score);
-    const best = myScores.length ? Math.max(...myScores) : 0;
-    document.getElementById('best-val').textContent = best;
+    document.getElementById('best-val').textContent = myScores.length ? Math.max(...myScores) : 0;
   }
 }
 
 document.getElementById('refresh-lb-btn').addEventListener('click', () => loadLeaderboard(activeGame));
 
-// 6. 認証・セッション管理
-document.getElementById('auth-toggle-btn').addEventListener('click', () => authModal.classList.remove('hidden'));
+// 6. 登录/注册认证
+document.getElementById('auth-toggle-btn').addEventListener('click', () => authModal.classList.toggle('hidden'));
 document.getElementById('close-modal').addEventListener('click', () => authModal.classList.add('hidden'));
 
 document.getElementById('login-submit').addEventListener('click', async () => {
@@ -366,7 +359,7 @@ async function refreshProfileStats() {
   document.getElementById('prof-save-status').textContent = sData ? `保存済み (${sData.char_name})` : '未保存';
 }
 
-// 初期起動
+// 初始化
 controlsHint.innerHTML = window.ArcadeGames.tetris.controlsHint;
 window.ArcadeGames.tetris.initIdle();
 checkSession();
