@@ -8,31 +8,39 @@
   <link rel="manifest" href="./manifest.json" />
   <title>DIABLO</title>
 
-  <!-- 核心修复：拦截所有写死的 "/diabloweb/" 路径（XHR、fetch、ServiceWorker）并改写为当前目录 "./" -->
+  <!-- 终极路径修复：清洗 Worker / fetch / XHR 的重复路径与 /diabloweb/ 前缀 -->
   <script>
     (function() {
       function fixDiabloUrl(url) {
         if (typeof url !== 'string') return url;
-        return url
+        let fixed = url
+          // 1. 替换带完整域名的 /diabloweb/ 或重复的 /arcade-game-platform/diablo/
           .replace(/^https?:\/\/[^\/]+\/diabloweb\//, './')
           .replace(/^\/diabloweb\//, './')
-          .replace(/^https?:\/\/[^\/]+\/(spawn\.mpq|service-worker\.js|static\/|.*\.wasm|.*\.worker\.js)/, './$1')
-          .replace(/^\/(spawn\.mpq|service-worker\.js|static\/|.*\.wasm|.*\.worker\.js)/, './$1');
+          .replace(/(\/arcade-game-platform\/diablo)+/g, '/arcade-game-platform/diablo')
+          .replace(/^https?:\/\/[^\/]+\/(spawn\.mpq|static\/|.*\.wasm|.*\.worker\.js)/, './$1')
+          .replace(/^\/(spawn\.mpq|static\/|.*\.wasm|.*\.worker\.js)/, './$1');
+        return fixed;
       }
 
-      // 1. 修复 ServiceWorker 路径
+      // 1. 拦截 Web Worker 构造函数（修复 d2271be9a67638d3642f.worker.js 重复路径 404）
+      const OrigWorker = window.Worker;
+      window.Worker = function(scriptURL, options) {
+        const fixedWorkerUrl = fixDiabloUrl(
+          scriptURL instanceof URL ? scriptURL.href : String(scriptURL)
+        );
+        return new OrigWorker(fixedWorkerUrl, options);
+      };
+      window.Worker.prototype = OrigWorker.prototype;
+
+      // 2. 拦截 ServiceWorker（防止其内部写死的 /diabloweb/precache-manifest 报错）
       if ('serviceWorker' in navigator) {
-        const origRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
-        navigator.serviceWorker.register = function(scriptURL, options) {
-          const fixedScript = fixDiabloUrl(scriptURL);
-          const fixedOpts = options && options.scope
-            ? Object.assign({}, options, { scope: './' })
-            : options;
-          return origRegister(fixedScript, fixedOpts);
+        navigator.serviceWorker.register = function() {
+          return Promise.resolve({});
         };
       }
 
-      // 2. 修复 fetch 请求
+      // 3. 拦截 fetch 请求
       const origFetch = window.fetch;
       window.fetch = function(input, init) {
         if (typeof input === 'string') {
@@ -44,7 +52,7 @@
         return origFetch.call(this, input, init);
       };
 
-      // 3. 修复 XMLHttpRequest (axios 下载 spawn.mpq 使用此接口)
+      // 4. 拦截 XMLHttpRequest (axios 下载 spawn.mpq)
       const origOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function(method, url) {
         arguments[1] = fixDiabloUrl(url);
