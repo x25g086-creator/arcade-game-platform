@@ -7,13 +7,48 @@
   <meta name="theme-color" content="#000000" />
   <link rel="manifest" href="./manifest.json" />
   <title>DIABLO</title>
+
+  <!-- 核心修复：自动将打包代码内部的 "/diabloweb/" 请求重定向到当前目录 "./" -->
+  <script>
+    (function() {
+      function fixDiabloUrl(url) {
+        if (typeof url === 'string') {
+          return url
+            .replace(/^https?:\/\/[^\/]+\/diabloweb\//, './')
+            .replace(/^\/diabloweb\//, './');
+        }
+        return url;
+      }
+
+      // 拦截 fetch 请求（用于加载 spawn.mpq / wasm 等）
+      const origFetch = window.fetch;
+      window.fetch = function(input, init) {
+        if (typeof input === 'string') {
+          input = fixDiabloUrl(input);
+        } else if (input && input.url) {
+          const fixed = fixDiabloUrl(input.url);
+          if (fixed !== input.url) {
+            input = new Request(fixed, input);
+          }
+        }
+        return origFetch.call(this, input, init);
+      };
+
+      // 拦截 XMLHttpRequest 请求（axios 底层使用 XHR 下载 spawn.mpq，正是报 404 的来源）
+      const origOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url) {
+        arguments[1] = fixDiabloUrl(url);
+        return origOpen.apply(this, arguments);
+      };
+    })();
+  </script>
+
   <link href="./static/css/main.e1dd4272.chunk.css" rel="stylesheet" />
 </head>
 <body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
   <div id="root"></div>
 
-  <!-- Webpack 运行时加载器（基准路径 i.p 已修复为相对路径 "./"） -->
   <script>
     !function(f) {
       function e(e) {
@@ -94,7 +129,6 @@
         return Object.prototype.hasOwnProperty.call(e, r);
       };
 
-      // 关键修复：将原来的 "/diabloweb/" 改为当前目录 "./"
       i.p = "./";
 
       var r = window.webpackJsonp = window.webpackJsonp || [],
@@ -107,7 +141,6 @@
     }([]);
   </script>
 
-  <!-- 核心 JS 分块文件（路径已修复为 "./static/js/..."） -->
   <script src="./static/js/0.aaa06a1e.chunk.js"></script>
   <script src="./static/js/5.430d8c5c.chunk.js"></script>
   <script src="./static/js/main.0a18bc0c.chunk.js"></script>
