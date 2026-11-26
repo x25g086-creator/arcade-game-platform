@@ -8,39 +8,44 @@
   <link rel="manifest" href="./manifest.json" />
   <title>DIABLO</title>
 
-  <!-- 终极路径修复：清洗 Worker / fetch / XHR 的重复路径与 /diabloweb/ 前缀 -->
+  <!-- 终极路径清洗：无论前面拼接了多少层路径，直接提取纯文件名定位到当前目录 "./" -->
   <script>
     (function() {
       function fixDiabloUrl(url) {
         if (typeof url !== 'string') return url;
-        let fixed = url
-          // 1. 替换带完整域名的 /diabloweb/ 或重复的 /arcade-game-platform/diablo/
+        
+        // 1. 终极核武器：只要请求的是 .worker.js、.wasm 或 spawn.mpq，无视前面所有冗余路径，直接提取文件名！
+        const coreMatch = url.match(/([^\/]+\.(?:worker\.js|wasm|mpq))(\?.*)?$/i);
+        if (coreMatch) {
+          return './' + coreMatch[1] + (coreMatch[2] || '');
+        }
+
+        // 2. 清理其他 /diabloweb/ 或重复的 /arcade-game-platform/diablo/ 前缀
+        return url
           .replace(/^https?:\/\/[^\/]+\/diabloweb\//, './')
           .replace(/^\/diabloweb\//, './')
-          .replace(/(\/arcade-game-platform\/diablo)+/g, '/arcade-game-platform/diablo')
-          .replace(/^https?:\/\/[^\/]+\/(spawn\.mpq|static\/|.*\.wasm|.*\.worker\.js)/, './$1')
-          .replace(/^\/(spawn\.mpq|static\/|.*\.wasm|.*\.worker\.js)/, './$1');
-        return fixed;
+          .replace(/(\.?\/arcade-game-platform\/diablo)+/g, '/arcade-game-platform/diablo')
+          .replace(/^https?:\/\/[^\/]+\/(service-worker\.js|static\/)/, './$1')
+          .replace(/^\/(service-worker\.js|static\/)/, './$1');
       }
 
-      // 1. 拦截 Web Worker 构造函数（修复 d2271be9a67638d3642f.worker.js 重复路径 404）
+      // 1. 拦截 Web Worker 构造函数
       const OrigWorker = window.Worker;
       window.Worker = function(scriptURL, options) {
-        const fixedWorkerUrl = fixDiabloUrl(
-          scriptURL instanceof URL ? scriptURL.href : String(scriptURL)
-        );
+        const rawUrl = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+        const fixedWorkerUrl = fixDiabloUrl(rawUrl);
         return new OrigWorker(fixedWorkerUrl, options);
       };
       window.Worker.prototype = OrigWorker.prototype;
 
-      // 2. 拦截 ServiceWorker（防止其内部写死的 /diabloweb/precache-manifest 报错）
+      // 2. 拦截 ServiceWorker
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register = function() {
           return Promise.resolve({});
         };
       }
 
-      // 3. 拦截 fetch 请求
+      // 3. 拦截 fetch 请求（加载 .wasm 等）
       const origFetch = window.fetch;
       window.fetch = function(input, init) {
         if (typeof input === 'string') {
