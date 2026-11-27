@@ -55,38 +55,42 @@
   <main id="view-lobby" class="main-layout">
     <aside class="card">
       <div class="sidebar-title">ゲームカタログ</div>
-      <ul class="menu-list">
+      <ul class="menu-list" id="game-catalog-list">
         <li class="menu-item active" data-game="tetris">🧱 テトリス</li>
-        <li class="menu-item" style="padding:0;">
-          <a href="./mario/main.html" target="_blank" rel="noopener noreferrer" style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:10px 12px; color:inherit; text-decoration:none;">
-            <span>🍄 スーパーマリオ</span>
-            <span style="font-size:0.75rem; opacity:0.75;">↗ 別窓</span>
-          </a>
-        </li>
-        <li class="menu-item" style="padding:0;">
-          <a href="./pacman.html" target="_blank" rel="noopener noreferrer" style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:10px 12px; color:inherit; text-decoration:none;">
-            <span>👾 パックマン</span>
-            <span style="font-size:0.75rem; opacity:0.75;">↗ 別窓</span>
-          </a>
-        </li>
+        <li class="menu-item" data-game="mario">🍄 スーパーマリオ</li>
+        <li class="menu-item" data-game="pacman">👾 パックマン</li>
       </ul>
     </aside>
 
-    <section class="card game-stage">
-      <div class="stage-header">
-        <h2>🧱 テトリス (Tetris)</h2>
-        <div style="display:flex; gap:8px;">
+    <section class="card game-stage" id="game-stage-container" style="min-width:0;">
+      <div class="stage-header" style="flex-wrap:wrap; gap:8px;">
+        <h2 id="stage-game-title" style="font-size:1.15rem; margin:0;">🧱 テトリス (Tetris)</h2>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
           <button id="fullscreen-btn" class="secondary">⛶ 全画面</button>
           <button id="start-game-btn" class="primary">ゲーム開始</button>
+          <button id="start-external-btn" class="primary hidden">▶ ゲーム開始</button>
         </div>
       </div>
 
-      <div class="stats-bar">
+      <!-- テトリス専用スコアバー -->
+      <div id="tetris-stats-bar" class="stats-bar">
         <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
         <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
       </div>
 
+      <!-- テトリス画布 -->
       <canvas id="tetris-canvas" width="240" height="400"></canvas>
+
+      <!-- 外部ゲーム（マリオ / パックマン）の待機プレビュー画面（ゲーム開始を押す前） -->
+      <div id="external-preview-box" class="hidden" style="width:100%; height:400px; background:#070b14; border:1px solid #1e293b; border-radius:8px; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:24px; margin:8px 0;">
+        <div id="preview-icon" style="font-size:3.5rem; margin-bottom:12px;">🍄</div>
+        <h3 id="preview-title" style="margin:0 0 8px 0; color:#f8fafc;">スーパーマリオ (Super Mario)</h3>
+        <p id="preview-desc" style="color:#94a3b8; font-size:0.88rem; max-width:320px; line-height:1.6; margin:0 0 18px 0;">
+          上の「▶ ゲーム開始」ボタンを押すと全画面モードで起動します。
+        </p>
+        <button id="preview-center-start-btn" class="primary" style="padding:10px 24px; font-size:0.95rem;">▶ ゲーム開始（全画面）</button>
+      </div>
+
       <div id="controls-hint" class="controls-hint">
         操作方法：← → 移動 / ↑ 回転 / ↓ 落下加速 / スペース 一気に落下
       </div>
@@ -129,8 +133,222 @@
     </p>
   </section>
 
+  <!-- 全画面ゲームオーバーレイ（「ゲーム開始」を押した時のみ起動・画面中央配置） -->
+  <div id="fullscreen-game-overlay" style="display:none; position:fixed; inset:0; width:100vw; height:100vh; background:#000; z-index:9999; flex-direction:column;">
+    <div style="height:48px; padding:0 16px; background:rgba(15,23,42,0.95); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <strong id="fs-game-title" style="color:#fff; font-size:1rem;">🍄 スーパーマリオ</strong>
+        <span id="fs-game-hint" style="color:#94a3b8; font-size:0.82rem;">S: スタート・ジャンプ / ← →: 移動 / A: ダッシュ・ファイア</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="fs-native-btn" class="secondary" style="padding:5px 12px; font-size:0.85rem;">⛶ モニター全画面</button>
+        <button id="fs-reload-btn" class="primary" style="padding:5px 12px; font-size:0.85rem;">🔄 リセット</button>
+        <button id="fs-close-btn" class="danger" style="padding:5px 12px; font-size:0.85rem;">✕ ロビーへ戻る</button>
+      </div>
+    </div>
+
+    <div style="flex:1; width:100%; height:calc(100vh - 48px); display:flex; justify-content:center; align-items:center; overflow:hidden; background:#000;">
+      <iframe
+        id="fs-game-frame"
+        src="about:blank"
+        style="width:100%; height:100%; border:none; display:block; background:#000;"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </div>
+
   <script src="js/supabase-client.js"></script>
   <script src="js/games/tetris.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- ゲーム切り替え＆中央全画面起動スクリプト -->
+  <script>
+    (function() {
+      const catalogItems = document.querySelectorAll('#game-catalog-list .menu-item');
+      const stageTitle = document.getElementById('stage-game-title');
+      const fullscreenBtn = document.getElementById('fullscreen-btn');
+      const startTetrisBtn = document.getElementById('start-game-btn');
+      const startExternalBtn = document.getElementById('start-external-btn');
+      const tetrisStatsBar = document.getElementById('tetris-stats-bar');
+      const tetrisCanvas = document.getElementById('tetris-canvas');
+      const previewBox = document.getElementById('external-preview-box');
+      const previewIcon = document.getElementById('preview-icon');
+      const previewTitle = document.getElementById('preview-title');
+      const previewDesc = document.getElementById('preview-desc');
+      const previewCenterStartBtn = document.getElementById('preview-center-start-btn');
+      const controlsHint = document.getElementById('controls-hint');
+
+      const overlay = document.getElementById('fullscreen-game-overlay');
+      const fsTitle = document.getElementById('fs-game-title');
+      const fsHint = document.getElementById('fs-game-hint');
+      const fsFrame = document.getElementById('fs-game-frame');
+      const fsNativeBtn = document.getElementById('fs-native-btn');
+      const fsReloadBtn = document.getElementById('fs-reload-btn');
+      const fsCloseBtn = document.getElementById('fs-close-btn');
+
+      let currentSelectedGame = 'tetris';
+
+      const gameConfigs = {
+        tetris: {
+          title: '🧱 テトリス (Tetris)',
+          hint: '操作方法：← → 移動 / ↑ 回転 / ↓ 落下加速 / スペース 一気に落下',
+          type: 'canvas'
+        },
+        mario: {
+          icon: '🍄',
+          title: '🍄 スーパーマリオ (Super Mario)',
+          shortTitle: 'スーパーマリオ (Super Mario)',
+          desc: '懐かしの横スクロールアクション！全画面モードで快適にプレイできます。',
+          hint: '操作方法：S スタート・ジャンプ / ← → 移動 / A ダッシュ・ファイア',
+          type: 'external',
+          src: './mario/main.html'
+        },
+        pacman: {
+          icon: '👾',
+          title: '👾 パックマン (Pac-Man)',
+          shortTitle: 'パックマン (Pac-Man)',
+          desc: 'クラシックアーケードの迷路アクション！全画面モードで起動します。',
+          hint: '操作方法：← ↑ ↓ → 方向キーで移動',
+          type: 'external',
+          src: './pacman.html'
+        }
+      };
+
+      // iframe 内のキャンバスを強制的に画面中央へ配置するスタイル注入
+      function centerIframeContent(iframe) {
+        try {
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          if (!doc || !doc.head) return;
+
+          const style = doc.createElement('style');
+          style.textContent = `
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              height: 100% !important;
+              background: #000 !important;
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
+              overflow: hidden !important;
+            }
+            canvas {
+              position: static !important;
+              float: none !important;
+              margin: auto !important;
+              display: block !important;
+              max-width: 96vw !important;
+              max-height: 92vh !important;
+              width: auto !important;
+              height: auto !important;
+              object-fit: contain !important;
+            }
+          `;
+          doc.head.appendChild(style);
+        } catch (e) {}
+      }
+
+      // 1. 左側メニュー選択時（ロビー画面のままプレビュー表示・まだ全画面にはしない）
+      function selectGameInLobby(gameKey) {
+        const cfg = gameConfigs[gameKey];
+        if (!cfg) return;
+        currentSelectedGame = gameKey;
+
+        catalogItems.forEach(item => {
+          item.classList.toggle('active', item.dataset.game === gameKey);
+        });
+
+        stageTitle.textContent = cfg.title;
+        controlsHint.textContent = cfg.hint;
+
+        if (cfg.type === 'canvas') {
+          previewBox.classList.add('hidden');
+          previewBox.style.display = 'none';
+          tetrisStatsBar.classList.remove('hidden');
+          tetrisCanvas.classList.remove('hidden');
+          fullscreenBtn.classList.remove('hidden');
+          startTetrisBtn.classList.remove('hidden');
+          startExternalBtn.classList.add('hidden');
+        } else {
+          tetrisStatsBar.classList.add('hidden');
+          tetrisCanvas.classList.add('hidden');
+          fullscreenBtn.classList.add('hidden');
+          startTetrisBtn.classList.add('hidden');
+          startExternalBtn.classList.remove('hidden');
+
+          previewIcon.textContent = cfg.icon;
+          previewTitle.textContent = cfg.shortTitle;
+          previewDesc.textContent = cfg.desc;
+          previewBox.classList.remove('hidden');
+          previewBox.style.display = 'flex';
+        }
+      }
+
+      // 2. 「ゲーム開始」クリック時に初めて全画面オーバーレイを起動
+      function launchSelectedExternalGame() {
+        const cfg = gameConfigs[currentSelectedGame];
+        if (!cfg || cfg.type !== 'external') return;
+
+        fsTitle.textContent = cfg.title;
+        fsHint.textContent = cfg.hint;
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        fsFrame.src = cfg.src;
+        fsFrame.onload = function() {
+          centerIframeContent(fsFrame);
+          try {
+            fsFrame.contentWindow.focus();
+          } catch (e) {}
+        };
+
+        if (overlay.requestFullscreen && !document.fullscreenElement) {
+          overlay.requestFullscreen().catch(() => {});
+        }
+      }
+
+      // 3. 「ロビーへ戻る」で全画面を閉じる（選択中のゲームプレビュー状態に戻る）
+      function closeFullscreenGame() {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        fsFrame.src = 'about:blank';
+
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+
+      catalogItems.forEach(item => {
+        item.addEventListener('click', function() {
+          selectGameInLobby(this.dataset.game);
+        });
+      });
+
+      startExternalBtn.addEventListener('click', launchSelectedExternalGame);
+      previewCenterStartBtn.addEventListener('click', launchSelectedExternalGame);
+
+      fsNativeBtn.addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+          overlay.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+        try { fsFrame.contentWindow.focus(); } catch (e) {}
+      });
+
+      fsReloadBtn.addEventListener('click', function() {
+        const currentSrc = fsFrame.src;
+        if (currentSrc && currentSrc !== 'about:blank') {
+          fsFrame.src = 'about:blank';
+          setTimeout(() => {
+            fsFrame.src = currentSrc;
+          }, 50);
+        }
+      });
+
+      fsCloseBtn.addEventListener('click', closeFullscreenGame);
+    })();
+  </script>
 </body>
 </html>
