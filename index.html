@@ -51,30 +51,46 @@
     <p id="auth-message" class="msg"></p>
   </div>
 
-  <!-- 独立视图 2：游戏大厅（テトリス） -->
+  <!-- 独立视图 2：游戏大厅（テトリス / スーパーマリオ / パックマン） -->
   <main id="view-lobby" class="main-layout">
     <aside class="card">
       <div class="sidebar-title">ゲームカタログ</div>
-      <ul class="menu-list">
+      <ul class="menu-list" id="game-catalog-list">
         <li class="menu-item active" data-game="tetris">🧱 テトリス</li>
+        <li class="menu-item" data-game="mario">🍄 スーパーマリオ</li>
+        <li class="menu-item" data-game="pacman">👾 パックマン</li>
       </ul>
     </aside>
 
-    <section class="card game-stage">
+    <section class="card game-stage" id="game-stage-container">
       <div class="stage-header">
-        <h2>🧱 テトリス (Tetris)</h2>
+        <h2 id="stage-game-title">🧱 テトリス (Tetris)</h2>
         <div style="display:flex; gap:8px;">
           <button id="fullscreen-btn" class="secondary">⛶ 全画面</button>
           <button id="start-game-btn" class="primary">ゲーム開始</button>
+          <button id="reload-external-btn" class="primary hidden">🔄 リセット</button>
         </div>
       </div>
 
-      <div class="stats-bar">
+      <!-- テトリス専用スコアバー -->
+      <div id="tetris-stats-bar" class="stats-bar">
         <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
         <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
       </div>
 
+      <!-- テトリス画布 -->
       <canvas id="tetris-canvas" width="240" height="400"></canvas>
+
+      <!-- 外部HTML5ゲームコンテナ（スーパーマリオ / パックマン） -->
+      <div id="external-game-wrapper" class="hidden" style="width:100%; display:flex; justify-content:center; align-items:center; background:#000; border-radius:8px; overflow:hidden; margin:8px 0;">
+        <iframe
+          id="external-game-frame"
+          src="about:blank"
+          style="width:100%; max-width:640px; height:480px; border:none; display:block; background:#000;"
+          allowfullscreen
+        ></iframe>
+      </div>
+
       <div id="controls-hint" class="controls-hint">
         操作方法：← → 移動 / ↑ 回転 / ↓ 落下加速 / スペース 一気に落下
       </div>
@@ -120,5 +136,109 @@
   <script src="js/supabase-client.js"></script>
   <script src="js/games/tetris.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- 多ゲーム切り替え制御スクリプト（スーパーマリオ / パックマン統合） -->
+  <script>
+    (function() {
+      const catalogItems = document.querySelectorAll('#game-catalog-list .menu-item');
+      const stageTitle = document.getElementById('stage-game-title');
+      const startTetrisBtn = document.getElementById('start-game-btn');
+      const reloadExternalBtn = document.getElementById('reload-external-btn');
+      const tetrisStatsBar = document.getElementById('tetris-stats-bar');
+      const tetrisCanvas = document.getElementById('tetris-canvas');
+      const externalWrapper = document.getElementById('external-game-wrapper');
+      const externalFrame = document.getElementById('external-game-frame');
+      const controlsHint = document.getElementById('controls-hint');
+
+      // 初期状態では外部ゲーム枠を非表示にする（inline flex との競合防止）
+      externalWrapper.style.display = 'none';
+
+      const gameConfigs = {
+        tetris: {
+          title: '🧱 テトリス (Tetris)',
+          hint: '操作方法：← → 移動 / ↑ 回転 / ↓ 落下加速 / スペース 一気に落下',
+          type: 'canvas'
+        },
+        mario: {
+          title: '🍄 スーパーマリオ (Super Mario)',
+          hint: '操作方法：S スタート・ジャンプ / ← → 移動 / A ダッシュ・ファイア（画面クリック後に操作）',
+          type: 'iframe',
+          src: './mario/main.html'
+        },
+        pacman: {
+          title: '👾 パックマン (Pac-Man)',
+          hint: '操作方法：← ↑ ↓ → 方向キーで移動',
+          type: 'iframe',
+          src: './pacman.html'
+        }
+      };
+
+      function switchGame(gameKey) {
+        const cfg = gameConfigs[gameKey];
+        if (!cfg) return;
+
+        // 左側メニューのアクティブ表示を切り替え
+        catalogItems.forEach(item => {
+          item.classList.toggle('active', item.dataset.game === gameKey);
+        });
+
+        stageTitle.textContent = cfg.title;
+        controlsHint.textContent = cfg.hint;
+
+        if (cfg.type === 'canvas') {
+          // テトリス表示へ戻す
+          externalWrapper.style.display = 'none';
+          externalFrame.src = 'about:blank';
+          tetrisStatsBar.classList.remove('hidden');
+          tetrisCanvas.classList.remove('hidden');
+          startTetrisBtn.classList.remove('hidden');
+          reloadExternalBtn.classList.add('hidden');
+        } else {
+          // 外部HTML5ゲーム（スーパーマリオ / パックマン）を表示
+          tetrisStatsBar.classList.add('hidden');
+          tetrisCanvas.classList.add('hidden');
+          startTetrisBtn.classList.add('hidden');
+          reloadExternalBtn.classList.remove('hidden');
+
+          externalWrapper.style.display = 'flex';
+          externalFrame.src = cfg.src;
+
+          // iframe 読み込み完了後に自動フォーカスしてキーボード操作を即有効化
+          externalFrame.onload = function() {
+            try {
+              externalFrame.contentWindow.focus();
+            } catch (e) {}
+          };
+        }
+      }
+
+      catalogItems.forEach(item => {
+        item.addEventListener('click', function() {
+          switchGame(this.dataset.game);
+        });
+      });
+
+      // リセットボタン（マリオ等を最初からやり直す）
+      reloadExternalBtn.addEventListener('click', function() {
+        if (externalFrame.src && externalFrame.src !== 'about:blank') {
+          const currentSrc = externalFrame.src;
+          externalFrame.src = 'about:blank';
+          setTimeout(() => {
+            externalFrame.src = currentSrc;
+          }, 50);
+        }
+      });
+
+      // iframe 内プレイ中に方向キー・スペースキーで親ページがスクロールするのを防止
+      window.addEventListener('keydown', function(e) {
+        const activeItem = document.querySelector('#game-catalog-list .menu-item.active');
+        if (activeItem && activeItem.dataset.game !== 'tetris') {
+          if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+            e.preventDefault();
+          }
+        }
+      }, { passive: false });
+    })();
+  </script>
 </body>
 </html>
