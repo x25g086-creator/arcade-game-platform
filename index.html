@@ -8,91 +8,24 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <!-- 顶部导航栏 -->
+  <!-- 顶部导航栏（干净无登录门禁） -->
   <header class="navbar">
     <div class="nav-left">
       <div class="brand">🎮 Arcade Cloud</div>
       <nav class="nav-links">
         <button class="nav-btn active" data-view="lobby">🕹️ ゲームロビー</button>
-        <button class="nav-btn" data-view="profile">👤 マイページ</button>
         <button class="nav-btn" data-view="about">📖 システム概要</button>
         <a href="https://x25g086-creator.github.io/calendar-app/" class="calendar-link-btn" style="text-decoration:none;">📅 カレンダーへ戻る</a>
       </nav>
     </div>
 
     <div class="user-area">
-      <span id="user-greeting" class="user-name">ゲストモード</span>
-      <button id="auth-toggle-btn" class="primary">ログイン / 新規登録</button>
-      <button id="logout-btn" class="danger hidden">ログアウト</button>
+      <span class="user-name" style="color:#4ade80;">● フリープレイモード</span>
     </div>
   </header>
 
-  <!-- 独立视图 1：极简登录 / 注册卡片 -->
-  <div id="auth-view" class="auth-box">
-    <!-- 顶部切换 Tab -->
-    <div style="display:flex; background:#0f172a; padding:4px; border-radius:10px; margin-bottom:20px; border:1px solid #334155;">
-      <button type="button" id="tab-login-mode" style="flex:1; padding:8px 12px; border:none; border-radius:7px; font-weight:bold; cursor:pointer; background:#38bdf8; color:#0f172a; transition:0.2s;">
-        🔑 ログイン
-      </button>
-      <button type="button" id="tab-signup-mode" style="flex:1; padding:8px 12px; border:none; border-radius:7px; font-weight:bold; cursor:pointer; background:transparent; color:#94a3b8; transition:0.2s;">
-        📝 新規登録
-      </button>
-    </div>
-
-    <h2 id="auth-mode-title" style="margin:0 0 18px 0; font-size:1.25rem;">ログイン</h2>
-
-    <div class="form-group">
-      <label>メールアドレス</label>
-      <input type="email" id="email-input" placeholder="example@mail.com" />
-    </div>
-    <div class="form-group">
-      <label>パスワード（6文字以上）</label>
-      <input type="password" id="password-input" placeholder="••••••" />
-    </div>
-
-    <!-- 利用規約勾选框（放在登录页，所有详细说明收纳在弹窗中） -->
-    <div id="terms-row" style="margin:14px 0 18px 0; font-size:0.85rem; color:#cbd5e1;">
-      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
-        <input type="checkbox" id="terms-checkbox" style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
-        <span>
-          <a href="javascript:void(0)" id="open-terms-modal" style="color:#38bdf8; text-decoration:underline;">利用規約</a>に同意する
-        </span>
-      </label>
-    </div>
-
-    <!-- 登录与注册按钮 -->
-    <button type="button" id="login-submit" class="primary" style="width:100%; padding:11px; font-size:0.95rem; font-weight:bold;">
-      ログイン
-    </button>
-    <button type="button" id="signup-submit" class="secondary" style="display:none; width:100%; padding:11px; font-size:0.95rem; font-weight:bold; background:#22c55e; color:#052e16; border:none;">
-      新規登録
-    </button>
-
-    <!-- 反馈信息提示区 -->
-    <p id="auth-message" class="msg" style="margin-top:14px; line-height:1.5; font-size:0.88rem; min-height:22px;"></p>
-  </div>
-
-  <!-- 利用規約弹窗 -->
-  <div id="terms-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:10000; justify-content:center; align-items:center; padding:16px;">
-    <div class="card" style="max-width:460px; width:100%; padding:20px; border:1px solid #334155;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h3 style="margin:0; font-size:1.05rem;">📜 利用規約・ご利用案内</h3>
-        <button id="close-terms-modal" class="secondary" style="padding:4px 10px;">✕</button>
-      </div>
-      <div style="font-size:0.84rem; color:#cbd5e1; line-height:1.65; max-height:260px; overflow-y:auto; padding-right:4px;">
-        <p style="margin-top:0;">1. <strong>利用条件</strong>：ゲームロビーの利用にはアカウント登録（メールアドレス・6文字以上のパスワード）およびログインが必要です。</p>
-        <p>2. <strong>データ管理</strong>：登録情報はアカウント認証およびゲーム戦績・ランキングのクラウド保存のみに使用されます。</p>
-        <p>3. <strong>禁止事項</strong>：不正なスコア改ざんやシステムへの過度な負荷をかける行為は禁止されています。</p>
-        <p style="margin-bottom:0;">4. <strong>免責事項</strong>：本サービスは学習・個人利用目的で提供されており、予告なく仕様を変更する場合があります。</p>
-      </div>
-      <div style="margin-top:16px; display:flex; justify-content:flex-end;">
-        <button id="agree-terms-btn" class="primary" style="padding:6px 16px;">同意して閉じる</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 独立视图 2：游戏大厅 -->
-  <main id="view-lobby" class="main-layout hidden">
+  <!-- 主视图：游戏大厅（打开即直接游玩） -->
+  <main id="view-lobby" class="main-layout">
     <aside class="card">
       <div class="sidebar-title">ゲームカタログ</div>
       <ul class="menu-list" id="game-catalog-list">
@@ -112,13 +45,16 @@
         </div>
       </div>
 
+      <!-- テトリス専用スコアバー -->
       <div id="tetris-stats-bar" class="stats-bar">
         <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
         <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
       </div>
 
+      <!-- テトリス画布 -->
       <canvas id="tetris-canvas" width="240" height="400"></canvas>
 
+      <!-- 外部ゲーム（スーパーマリオ / パックマン）の待機プレビュー画面 -->
       <div id="external-preview-box" class="hidden" style="width:100%; height:400px; background:#070b14; border:1px solid #1e293b; border-radius:8px; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:24px; margin:8px 0;">
         <div id="preview-icon" style="font-size:3.5rem; margin-bottom:12px;">🍄</div>
         <h3 id="preview-title" style="margin:0 0 16px 0; color:#f8fafc;">スーパーマリオ (Super Mario)</h3>
@@ -136,38 +72,20 @@
         <button id="refresh-lb-btn" class="secondary" style="padding:4px 10px; font-size:0.8rem;">更新</button>
       </div>
       <ul id="leaderboard-list" class="rank-list">
-        <li class="rank-item"><span>読み込み中...</span></li>
+        <li class="rank-item"><span>フリープレイ中</span></li>
       </ul>
     </aside>
   </main>
 
-  <!-- 独立视图 3：个人中心 -->
-  <section id="view-profile" class="card hidden" style="max-width:900px; margin:24px auto; width:92%;">
-    <h2>👤 マイページ</h2>
-    <div id="profile-guest-notice" style="margin-top:12px; padding:12px; background:#0f172a; border-radius:8px; color:#fbbf24; font-size:0.9rem;">
-      ゲストモードです。
-    </div>
-    <div id="profile-details" class="profile-grid hidden">
-      <div class="stat-box">
-        <div class="stat-label">アカウント</div>
-        <div id="prof-email" class="stat-num" style="font-size:1.05rem;">-</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">テトリス最高得点</div>
-        <div id="prof-tetris-best" class="stat-num" style="color:var(--green);">0</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 独立视图 4：系统概要 -->
+  <!-- 视图 2：系统概要 -->
   <section id="view-about" class="card hidden" style="max-width:900px; margin:24px auto; width:92%;">
     <h2>📖 システム概要</h2>
     <p style="margin-top:10px; color:var(--muted); font-size:0.92rem;">
-      ブラウザのみで動作するクラウドアーケードプラットフォーム（Supabase Auth / PostgreSQL / Storage 連携）。
+      ブラウザのみで動作するクラウドアーケードプラットフォーム。ログイン不要でテトリス・スーパーマリオ・パックマンをすぐにプレイできます。
     </p>
   </section>
 
-  <!-- 全画面ゲームオーバーレイ -->
+  <!-- 全画面ゲームオーバーレイ（スーパーマリオ / パックマン用） -->
   <div id="fullscreen-game-overlay" style="display:none; position:fixed; inset:0; width:100vw; height:100vh; background:#000; z-index:9999; flex-direction:column;">
     <div style="height:48px; padding:0 16px; background:rgba(15,23,42,0.95); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
       <div style="display:flex; align-items:center; gap:12px;">
@@ -191,275 +109,54 @@
     </div>
   </div>
 
-  <script src="js/supabase-client.js"></script>
+  <!-- 仅加载俄罗斯方块核心逻辑（彻底不加载旧版 app.js 的登录代码） -->
   <script src="js/games/tetris.js"></script>
-  <script src="js/app.js"></script>
 
-  <!-- 1. 独立クリーン認証ハンドラ（旧 app.js のボタン干渉を剥離し確実に結果を表示） -->
   <script>
     (function() {
-      const authView = document.getElementById('auth-view');
+      // 1. 顶部简单视图切换（ロビー / システム概要）
+      const navBtns = document.querySelectorAll('.nav-btn');
       const lobbyView = document.getElementById('view-lobby');
-      const profileView = document.getElementById('view-profile');
       const aboutView = document.getElementById('view-about');
 
-      const tabLoginBtn = document.getElementById('tab-login-mode');
-      const tabSignupBtn = document.getElementById('tab-signup-mode');
-      const modeTitle = document.getElementById('auth-mode-title');
-      const termsRow = document.getElementById('terms-row');
-      const termsCheckbox = document.getElementById('terms-checkbox');
-
-      const emailInput = document.getElementById('email-input');
-      const passwordInput = document.getElementById('password-input');
-      const authMessage = document.getElementById('auth-message');
-      const userGreeting = document.getElementById('user-greeting');
-      const authToggleBtn = document.getElementById('auth-toggle-btn');
-      const logoutBtn = document.getElementById('logout-btn');
-      const navBtns = document.querySelectorAll('.nav-btn');
-
-      // 旧 app.js が登録した壊れたイベントを完全に除去するため、ボタンをクローン置換する
-      const oldLoginBtn = document.getElementById('login-submit');
-      const loginBtn = oldLoginBtn.cloneNode(true);
-      oldLoginBtn.parentNode.replaceChild(loginBtn, oldLoginBtn);
-
-      const oldSignupBtn = document.getElementById('signup-submit');
-      const signupBtn = oldSignupBtn.cloneNode(true);
-      oldSignupBtn.parentNode.replaceChild(signupBtn, oldSignupBtn);
-
-      function showMsg(text, color) {
-        authMessage.style.display = 'block';
-        authMessage.style.color = color || '#f87171';
-        authMessage.textContent = text;
-      }
-
-      // ログイン・新規登録の画面切り替え
-      function setAuthMode(mode) {
-        authMessage.textContent = '';
-        if (mode === 'login') {
-          tabLoginBtn.style.background = '#38bdf8';
-          tabLoginBtn.style.color = '#0f172a';
-          tabSignupBtn.style.background = 'transparent';
-          tabSignupBtn.style.color = '#94a3b8';
-
-          modeTitle.textContent = 'ログイン';
-          termsRow.style.display = 'block';
-          loginBtn.style.display = 'block';
-          signupBtn.style.display = 'none';
-        } else {
-          tabSignupBtn.style.background = '#22c55e';
-          tabSignupBtn.style.color = '#052e16';
-          tabLoginBtn.style.background = 'transparent';
-          tabLoginBtn.style.color = '#94a3b8';
-
-          modeTitle.textContent = '新規登録';
-          termsRow.style.display = 'none';
-          loginBtn.style.display = 'none';
-          signupBtn.style.display = 'block';
-        }
-      }
-
-      tabLoginBtn.addEventListener('click', () => setAuthMode('login'));
-      tabSignupBtn.addEventListener('click', () => setAuthMode('signup'));
-
-      // 利用規約モーダル
-      const termsModal = document.getElementById('terms-modal');
-      document.getElementById('open-terms-modal').addEventListener('click', () => {
-        termsModal.style.display = 'flex';
-      });
-      document.getElementById('close-terms-modal').addEventListener('click', () => {
-        termsModal.style.display = 'none';
-      });
-      document.getElementById('agree-terms-btn').addEventListener('click', () => {
-        termsCheckbox.checked = true;
-        termsModal.style.display = 'none';
-        authMessage.textContent = '';
-      });
-
-      function getSb() {
-        if (window.sbClient && window.sbClient.auth) return window.sbClient;
-        if (window.supabase && window.supabase.createClient) {
-          window.sbClient = window.supabase.createClient(
-            'https://tijekdtlvaukoftmwmip.supabase.co',
-            'sb_publishable_gSiLVFW65_xnHw_u1Hv-TQ_1tF-orL0'
-          );
-          return window.sbClient;
-        }
-        return null;
-      }
-
-      function enterLobby(email) {
-        if (email) userGreeting.textContent = email;
-        authToggleBtn.classList.add('hidden');
-        logoutBtn.classList.remove('hidden');
-
-        authView.classList.add('hidden');
-        aboutView.classList.add('hidden');
-        profileView.classList.add('hidden');
-        lobbyView.classList.remove('hidden');
-        navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === 'lobby'));
-      }
-
-      function isLoggedIn() {
-        const txt = (userGreeting.textContent || '').trim();
-        return txt !== '' && txt !== 'ゲストモード';
-      }
-
-      // 初期ロード時に既存ログインセッションを確認
-      (async function initSessionCheck() {
-        const sb = getSb();
-        if (sb && sb.auth) {
-          try {
-            const { data } = await sb.auth.getSession();
-            if (data && data.session && data.session.user) {
-              enterLobby(data.session.user.email);
-              return;
-            }
-          } catch (e) {}
-        }
-        lobbyView.classList.add('hidden');
-        profileView.classList.add('hidden');
-        authView.classList.remove('hidden');
-      })();
-
-      // ログイン実行
-      loginBtn.addEventListener('click', async function() {
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        if (!email || !password) {
-          showMsg('メールアドレスとパスワードを入力してください。', '#f87171');
-          return;
-        }
-        if (!termsCheckbox.checked) {
-          showMsg('利用規約にチェックを入れて同意してください。', '#f87171');
-          return;
-        }
-
-        const sb = getSb();
-        if (!sb) {
-          showMsg('Supabase に接続できません。ページを再読み込みしてください。', '#f87171');
-          return;
-        }
-
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'ログイン中...';
-        showMsg('認証中...', '#38bdf8');
-
-        try {
-          const { data, error } = await sb.auth.signInWithPassword({ email, password });
-          if (error) {
-            if (error.message.includes('Invalid login credentials')) {
-              showMsg('メールアドレスまたはパスワードが間違っています。', '#f87171');
-            } else if (error.message.includes('Email not confirmed')) {
-              showMsg('メール認証が未完了です。受信メールのリンクを確認してください。', '#fbbf24');
-            } else {
-              showMsg('ログインエラー: ' + error.message, '#f87171');
-            }
-          } else if (data && data.user) {
-            showMsg('ログイン成功！', '#4ade80');
-            enterLobby(data.user.email);
-          } else {
-            showMsg('ログイン情報を取得できませんでした。', '#f87171');
-          }
-        } catch (err) {
-          showMsg('通信エラー: ' + (err.message || err), '#f87171');
-        } finally {
-          loginBtn.disabled = false;
-          loginBtn.textContent = 'ログイン';
-        }
-      });
-
-      // 新規登録実行（完了後、自動的にログイン画面へ戻る）
-      signupBtn.addEventListener('click', async function() {
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        if (!email) {
-          showMsg('メールアドレスを入力してください。', '#f87171');
-          return;
-        }
-        if (password.length < 6) {
-          showMsg('パスワードは6文字以上で入力してください。', '#f87171');
-          return;
-        }
-
-        const sb = getSb();
-        if (!sb) {
-          showMsg('Supabase に接続できません。ページを再読み込みしてください。', '#f87171');
-          return;
-        }
-
-        signupBtn.disabled = true;
-        signupBtn.textContent = '登録中...';
-        showMsg('登録処理中...', '#38bdf8');
-
-        try {
-          const { data, error } = await sb.auth.signUp({ email, password });
-          if (error) {
-            if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
-              setAuthMode('login');
-              showMsg('このメールアドレスは既に登録済みです。ログインしてください。', '#fbbf24');
-            } else if (error.message.includes('Database error')) {
-              showMsg('データベース処理エラー: ' + error.message + '（Supabaseのトリガー設定を確認してください）', '#f87171');
-            } else {
-              showMsg('登録エラー: ' + error.message, '#f87171');
-            }
-          } else {
-            if (data && data.session) {
-              await sb.auth.signOut();
-            }
-            setAuthMode('login');
-            passwordInput.value = '';
-            showMsg('登録が完了しました。利用規約に同意してログインしてください。', '#4ade80');
-          }
-        } catch (err) {
-          showMsg('通信エラー: ' + (err.message || err), '#f87171');
-        } finally {
-          signupBtn.disabled = false;
-          signupBtn.textContent = '新規登録';
-        }
-      });
-
-      // ログアウト
-      logoutBtn.addEventListener('click', async function() {
-        const sb = getSb();
-        if (sb && sb.auth) {
-          await sb.auth.signOut();
-        }
-        userGreeting.textContent = 'ゲストモード';
-        logoutBtn.classList.add('hidden');
-        authToggleBtn.classList.remove('hidden');
-        lobbyView.classList.add('hidden');
-        profileView.classList.add('hidden');
-        aboutView.classList.add('hidden');
-        setAuthMode('login');
-        authView.classList.remove('hidden');
-      });
-
-      // 未ログイン時のナビゲーション保護
       navBtns.forEach(btn => {
-        btn.addEventListener('click', function(e) {
-          const targetView = this.dataset.view;
-          if (targetView !== 'about' && !isLoggedIn()) {
-            e.stopImmediatePropagation();
-            lobbyView.classList.add('hidden');
-            profileView.classList.add('hidden');
+        btn.addEventListener('click', function() {
+          const view = this.dataset.view;
+          navBtns.forEach(b => b.classList.toggle('active', b === this));
+          if (view === 'lobby') {
+            lobbyView.classList.remove('hidden');
             aboutView.classList.add('hidden');
-            authView.classList.remove('hidden');
-            showMsg('ゲームをプレイするにはログインしてください。', '#fbbf24');
+          } else {
+            lobbyView.classList.add('hidden');
+            aboutView.classList.remove('hidden');
           }
-        }, true);
+        });
       });
-    })();
-  </script>
 
-  <!-- 2. ゲーム切り替え＆中央全画面起動スクリプト -->
-  <script>
-    (function() {
+      // 2. テトリス開始・全画面ボタン（直接绑定，不依赖 app.js）
+      const startTetrisBtn = document.getElementById('start-game-btn');
+      const fullscreenBtn = document.getElementById('fullscreen-btn');
+      const stageContainer = document.getElementById('game-stage-container');
+
+      startTetrisBtn.addEventListener('click', function() {
+        if (typeof window.startTetris === 'function') {
+          window.startTetris();
+        } else if (window.TetrisGame && typeof window.TetrisGame.start === 'function') {
+          window.TetrisGame.start();
+        }
+      });
+
+      fullscreenBtn.addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+          stageContainer.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+
+      // 3. ゲームカタログ切り替え＆スーパーマリオ・パックマン全画面起動
       const catalogItems = document.querySelectorAll('#game-catalog-list .menu-item');
       const stageTitle = document.getElementById('stage-game-title');
-      const fullscreenBtn = document.getElementById('fullscreen-btn');
-      const startTetrisBtn = document.getElementById('start-game-btn');
       const startExternalBtn = document.getElementById('start-external-btn');
       const tetrisStatsBar = document.getElementById('tetris-stats-bar');
       const tetrisCanvas = document.getElementById('tetris-canvas');
