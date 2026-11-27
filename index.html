@@ -27,7 +27,7 @@
     </div>
   </header>
 
-  <!-- 独立视图 1：极简登录 / 注册卡片 -->
+  <!-- 独立视图 1：极简登录 / 注册卡片（完全复用原版 app.js 的登录/注册逻辑） -->
   <div id="auth-view" class="auth-box">
     <!-- 顶部切换 Tab -->
     <div style="display:flex; background:#0f172a; padding:4px; border-radius:10px; margin-bottom:20px; border:1px solid #334155;">
@@ -50,7 +50,7 @@
       <input type="password" id="password-input" placeholder="••••••" />
     </div>
 
-    <!-- 利用規約勾选框（放在登录页，所有详细说明收在弹窗内） -->
+    <!-- 利用規約勾选框（放在登录页，详细说明收纳在弹窗中） -->
     <div id="terms-row" style="margin:14px 0 18px 0; font-size:0.85rem; color:#cbd5e1;">
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
         <input type="checkbox" id="terms-checkbox" style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
@@ -60,20 +60,18 @@
       </label>
     </div>
 
-    <!-- 登录按钮 -->
-    <button type="button" id="login-submit" class="primary" style="width:100%; padding:11px; font-size:0.95rem; font-weight:bold;">
+    <!-- 原版 app.js 绑定的登录与注册按钮 -->
+    <button id="login-submit" class="primary" style="width:100%; padding:11px; font-size:0.95rem; font-weight:bold;">
       ログイン
     </button>
-
-    <!-- 注册按钮 -->
-    <button type="button" id="signup-submit" style="display:none; width:100%; padding:11px; font-size:0.95rem; font-weight:bold; border:none; border-radius:8px; background:#22c55e; color:#052e16; cursor:pointer;">
+    <button id="signup-submit" class="secondary" style="display:none; width:100%; padding:11px; font-size:0.95rem; font-weight:bold; background:#22c55e; color:#052e16; border:none;">
       新規登録
     </button>
 
     <p id="auth-message" class="msg" style="margin-top:12px; line-height:1.5; font-size:0.86rem;"></p>
   </div>
 
-  <!-- 利用規約弹窗（所有详细说明均收纳于此） -->
+  <!-- 利用規約弹窗 -->
   <div id="terms-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:10000; justify-content:center; align-items:center; padding:16px;">
     <div class="card" style="max-width:460px; width:100%; padding:20px; border:1px solid #334155;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -192,11 +190,12 @@
     </div>
   </div>
 
+  <!-- 原版核心脚本（保持原本的登录・注册・ランキング・テトリス通信完全不变） -->
   <script src="js/supabase-client.js"></script>
   <script src="js/games/tetris.js"></script>
   <script src="js/app.js"></script>
 
-  <!-- 1. シンプル認証・利用規約チェック・自動画面遷移スクリプト -->
+  <!-- 1. UI モード切り替え・利用規約ガード・状態監視による自動遷移（原版 app.js を妨害しない軽量制御） -->
   <script>
     (function() {
       const authView = document.getElementById('auth-view');
@@ -210,21 +209,15 @@
       const termsRow = document.getElementById('terms-row');
       const termsCheckbox = document.getElementById('terms-checkbox');
 
-      const emailInput = document.getElementById('email-input');
-      const passwordInput = document.getElementById('password-input');
       const loginBtn = document.getElementById('login-submit');
       const signupBtn = document.getElementById('signup-submit');
       const authMessage = document.getElementById('auth-message');
-
       const userGreeting = document.getElementById('user-greeting');
-      const authToggleBtn = document.getElementById('auth-toggle-btn');
-      const logoutBtn = document.getElementById('logout-btn');
       const navBtns = document.querySelectorAll('.nav-btn');
 
       // ログイン画面と新規登録画面の切り替え
       function setAuthMode(mode) {
         authMessage.textContent = '';
-
         if (mode === 'login') {
           tabLoginBtn.style.background = '#38bdf8';
           tabLoginBtn.style.color = '#0f172a';
@@ -265,144 +258,61 @@
         authMessage.textContent = '';
       });
 
-      function getSbClient() {
-        return window.supabaseClient || window._supabase || window.sb || null;
-      }
-
-      function enterLobbyAsUser(email) {
-        if (email) {
-          userGreeting.textContent = email;
+      // 利用規約未チェック時のみログイン送信をブロック（チェック済みなら原版 app.js へそのまま通す）
+      loginBtn.addEventListener('click', function(e) {
+        if (!termsCheckbox.checked) {
+          e.stopImmediatePropagation();
+          authMessage.style.color = '#f87171';
+          authMessage.textContent = '利用規約に同意してください。';
         }
-        authToggleBtn.classList.add('hidden');
-        logoutBtn.classList.remove('hidden');
-
-        authView.classList.add('hidden');
-        aboutView.classList.add('hidden');
-        profileView.classList.add('hidden');
-        lobbyView.classList.remove('hidden');
-
-        navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === 'lobby'));
-      }
+      }, true);
 
       function isUserLoggedIn() {
         const txt = (userGreeting.textContent || '').trim();
         return txt !== '' && txt !== 'ゲストモード';
       }
 
-      // 初期セッション確認
-      setTimeout(async () => {
-        const sb = getSbClient();
-        if (sb && sb.auth) {
-          try {
-            const { data } = await sb.auth.getSession();
-            if (data && data.session && data.session.user) {
-              enterLobbyAsUser(data.session.user.email);
-              return;
-            }
-          } catch (e) {}
-        }
-        if (!isUserLoggedIn()) {
+      function syncViewByAuthState() {
+        if (isUserLoggedIn()) {
+          authView.classList.add('hidden');
+          aboutView.classList.add('hidden');
+          profileView.classList.add('hidden');
+          lobbyView.classList.remove('hidden');
+          navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === 'lobby'));
+        } else {
           lobbyView.classList.add('hidden');
+          profileView.classList.add('hidden');
           authView.classList.remove('hidden');
         }
-      }, 200);
+      }
 
-      // ログイン処理（利用規約チェック付き）
-      loginBtn.addEventListener('click', async function(e) {
-        e.stopImmediatePropagation();
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
+      // 初期状態チェック
+      setTimeout(syncViewByAuthState, 150);
 
-        if (!email || !password) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = 'メールアドレスとパスワードを入力してください。';
-          return;
-        }
-        if (!termsCheckbox.checked) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = '利用規約に同意してください。';
-          return;
-        }
+      // 原版 app.js がログイン成功・ログアウトで userGreeting を書き換えたら即座に画面遷移
+      const userObserver = new MutationObserver(() => {
+        syncViewByAuthState();
+      });
+      userObserver.observe(userGreeting, { childList: true, characterData: true, subtree: true });
 
-        const sb = getSbClient();
-        if (!sb || !sb.auth) return;
-
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'ログイン中...';
-        authMessage.textContent = '';
-
-        try {
-          const { data, error } = await sb.auth.signInWithPassword({ email, password });
-          if (error) {
-            authMessage.style.color = '#f87171';
-            if (error.message.includes('Invalid login credentials')) {
-              authMessage.textContent = 'メールアドレスまたはパスワードが正しくありません。';
-            } else if (error.message.includes('Email not confirmed')) {
-              authMessage.textContent = 'メール認証が未完了です。受信メールをご確認ください。';
-            } else {
-              authMessage.textContent = 'ログイン失敗: ' + error.message;
-            }
-          } else if (data && data.user) {
-            enterLobbyAsUser(data.user.email);
-          }
-        } catch (err) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = '通信エラーが発生しました。';
-        } finally {
-          loginBtn.disabled = false;
-          loginBtn.textContent = 'ログイン';
-        }
-      }, true);
-
-      // 新規登録処理（完了後、自動でログインページへ戻る）
-      signupBtn.addEventListener('click', async function(e) {
-        e.stopImmediatePropagation();
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        if (!email || password.length < 6) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = 'メールアドレスと6文字以上のパスワードを入力してください。';
-          return;
-        }
-
-        const sb = getSbClient();
-        if (!sb || !sb.auth) return;
-
-        signupBtn.disabled = true;
-        signupBtn.textContent = '登録中...';
-        authMessage.textContent = '';
-
-        try {
-          const { data, error } = await sb.auth.signUp({ email, password });
-          if (error) {
-            if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
-              setAuthMode('login');
-              authMessage.style.color = '#fbbf24';
-              authMessage.textContent = 'このメールアドレスは既に登録済みです。ログインしてください。';
-            } else {
-              authMessage.style.color = '#f87171';
-              authMessage.textContent = '登録失敗: ' + error.message;
-            }
-          } else {
-            if (data && data.session) {
-              await sb.auth.signOut();
-            }
+      // 原版 app.js の登録結果メッセージを監視し、完了・既存登録なら自動でログイン画面へ戻す
+      const msgObserver = new MutationObserver(() => {
+        const msg = authMessage.textContent || '';
+        if (msg.includes('User already registered') || msg.includes('already been registered')) {
+          setAuthMode('login');
+          authMessage.style.color = '#fbbf24';
+          authMessage.textContent = 'このメールアドレスは既に登録済みです。ログインしてください。';
+        } else if (msg.includes('登録成功') || msg.includes('確認メール') || msg.includes('登録完了')) {
+          setTimeout(() => {
             setAuthMode('login');
-            passwordInput.value = '';
             authMessage.style.color = '#4ade80';
             authMessage.textContent = '登録が完了しました。ログインしてください。';
-          }
-        } catch (err) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = '通信エラーが発生しました。';
-        } finally {
-          signupBtn.disabled = false;
-          signupBtn.textContent = '新規登録';
+          }, 800);
         }
-      }, true);
+      });
+      msgObserver.observe(authMessage, { childList: true, characterData: true, subtree: true });
 
-      // 未ログイン時のナビゲーション保護
+      // 未ログイン時はロビー・マイページへの移動をブロック
       navBtns.forEach(btn => {
         btn.addEventListener('click', function(e) {
           const targetView = this.dataset.view;
