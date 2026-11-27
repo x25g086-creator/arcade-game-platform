@@ -27,14 +27,14 @@
     </div>
   </header>
 
-  <!-- 独立视图 1：登录 / 注册页面 -->
-  <div id="auth-view" class="auth-box hidden">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <h2>アカウントログイン</h2>
-      <button id="close-auth-btn" class="secondary" style="padding:4px 10px;">✕ 戻る</button>
+  <!-- 独立视图 1：登录 / 注册页面（未登录时强制停留于此） -->
+  <div id="auth-view" class="auth-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h2 style="margin:0;">アカウント認証</h2>
+      <span style="font-size:0.78rem; padding:3px 8px; background:rgba(56,189,248,0.15); color:#38bdf8; border-radius:999px;">🔒 ログイン必須</span>
     </div>
-    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:14px;">
-      登録済みのメールアドレスとパスワードでそのままログインできます。
+    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:14px; line-height:1.5;">
+      ゲームロビーへ移動するには、アカウントへのログインまたは新規登録が必要です。
     </p>
     <div class="form-group">
       <label>メールアドレス</label>
@@ -44,15 +44,44 @@
       <label>パスワード（6文字以上）</label>
       <input type="password" id="password-input" placeholder="••••••" />
     </div>
+
+    <!-- 利用規約（服务协议）勾选框 -->
+    <div style="margin:12px 0 16px 0; padding:10px 12px; background:rgba(15,23,42,0.7); border:1px solid #334155; border-radius:8px; font-size:0.83rem;">
+      <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin:0; color:#e2e8f0;">
+        <input type="checkbox" id="terms-checkbox" style="width:16px; height:16px; margin-top:2px; accent-color:#38bdf8; cursor:pointer;" />
+        <span>
+          <a href="javascript:void(0)" id="open-terms-modal" style="color:#38bdf8; text-decoration:underline;">利用規約・プライバシーポリシー</a>に同意します（新規登録時に必須）
+        </span>
+      </label>
+    </div>
+
     <div style="display:flex; gap:10px;">
       <button id="login-submit" class="primary" style="flex:1;">ログイン</button>
       <button id="signup-submit" class="secondary" style="flex:1;">新規登録</button>
     </div>
-    <p id="auth-message" class="msg"></p>
+    <p id="auth-message" class="msg" style="margin-top:12px; line-height:1.5;"></p>
   </div>
 
-  <!-- 独立视图 2：游戏大厅 -->
-  <main id="view-lobby" class="main-layout">
+  <!-- 简明利用規約弹窗 -->
+  <div id="terms-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:10000; justify-content:center; align-items:center; padding:16px;">
+    <div class="card" style="max-width:460px; width:100%; padding:20px; border:1px solid #334155;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0; font-size:1.05rem;">📜 Arcade Cloud 利用規約</h3>
+        <button id="close-terms-modal" class="secondary" style="padding:4px 10px;">✕</button>
+      </div>
+      <div style="font-size:0.84rem; color:#cbd5e1; line-height:1.65; max-height:240px; overflow-y:auto; padding-right:4px;">
+        <p style="margin-top:0;">1. <strong>アカウント管理</strong>：登録されたメールアドレスおよびパスワードは、ゲーム戦績・ランキングのクラウド同期のみに使用されます。</p>
+        <p>2. <strong>適正利用</strong>：不正なスコア改ざんやサーバーへの過度な負荷をかける行為は禁止されています。</p>
+        <p style="margin-bottom:0;">3. <strong>免責事項</strong>：本プラットフォームは学習・個人利用目的で提供されており、予告なく仕様を変更する場合があります。</p>
+      </div>
+      <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+        <button id="agree-terms-btn" class="primary" style="padding:6px 16px;">同意して閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 独立视图 2：游戏大厅（ログイン成功後に自動表示） -->
+  <main id="view-lobby" class="main-layout hidden">
     <aside class="card">
       <div class="sidebar-title">ゲームカタログ</div>
       <ul class="menu-list" id="game-catalog-list">
@@ -81,7 +110,7 @@
       <!-- テトリス画布 -->
       <canvas id="tetris-canvas" width="240" height="400"></canvas>
 
-      <!-- 外部ゲーム（マリオ / パックマン）の待機プレビュー画面（ゲーム開始を押す前） -->
+      <!-- 外部ゲーム（マリオ / パックマン）の待機プレビュー画面 -->
       <div id="external-preview-box" class="hidden" style="width:100%; height:400px; background:#070b14; border:1px solid #1e293b; border-radius:8px; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:24px; margin:8px 0;">
         <div id="preview-icon" style="font-size:3.5rem; margin-bottom:12px;">🍄</div>
         <h3 id="preview-title" style="margin:0 0 8px 0; color:#f8fafc;">スーパーマリオ (Super Mario)</h3>
@@ -133,7 +162,7 @@
     </p>
   </section>
 
-  <!-- 全画面ゲームオーバーレイ（「ゲーム開始」を押した時のみ起動・画面中央配置） -->
+  <!-- 全画面ゲームオーバーレイ -->
   <div id="fullscreen-game-overlay" style="display:none; position:fixed; inset:0; width:100vw; height:100vh; background:#000; z-index:9999; flex-direction:column;">
     <div style="height:48px; padding:0 16px; background:rgba(15,23,42,0.95); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
       <div style="display:flex; align-items:center; gap:12px;">
@@ -161,7 +190,114 @@
   <script src="js/games/tetris.js"></script>
   <script src="js/app.js"></script>
 
-  <!-- ゲーム切り替え＆中央全画面起動スクリプト -->
+  <!-- 1. 認証強化・利用規約チェック・ログイン必須ゲート制御 -->
+  <script>
+    (function() {
+      const authView = document.getElementById('auth-view');
+      const lobbyView = document.getElementById('view-lobby');
+      const profileView = document.getElementById('view-profile');
+      const aboutView = document.getElementById('view-about');
+      const authMessage = document.getElementById('auth-message');
+      const signupBtn = document.getElementById('signup-submit');
+      const loginBtn = document.getElementById('login-submit');
+      const termsCheckbox = document.getElementById('terms-checkbox');
+      const userGreeting = document.getElementById('user-greeting');
+      const navBtns = document.querySelectorAll('.nav-btn');
+
+      // 利用規約モーダル制御
+      const termsModal = document.getElementById('terms-modal');
+      document.getElementById('open-terms-modal').addEventListener('click', () => {
+        termsModal.style.display = 'flex';
+      });
+      document.getElementById('close-terms-modal').addEventListener('click', () => {
+        termsModal.style.display = 'none';
+      });
+      document.getElementById('agree-terms-btn').addEventListener('click', () => {
+        termsCheckbox.checked = true;
+        termsModal.style.display = 'none';
+        if (authMessage.textContent.includes('利用規約')) {
+          authMessage.textContent = '';
+        }
+      });
+
+      // ログイン済み判定ヘルパー
+      function isUserLoggedIn() {
+        const txt = (userGreeting.textContent || '').trim();
+        return txt !== '' && txt !== 'ゲストモード';
+      }
+
+      // 未ログイン時はロビー・マイページをロックしログイン画面を表示
+      function enforceAuthGate(showNotice) {
+        if (!isUserLoggedIn()) {
+          lobbyView.classList.add('hidden');
+          profileView.classList.add('hidden');
+          authView.classList.remove('hidden');
+          if (showNotice) {
+            authMessage.style.color = '#fbbf24';
+            authMessage.textContent = '⚠️ ゲームをプレイするには、まずログインまたは新規登録を行ってください。';
+          }
+          return false;
+        }
+        return true;
+      }
+
+      // 初期起動時にログイン状態を監視（未ログインなら認証画面を固定表示）
+      setTimeout(() => enforceAuthGate(false), 120);
+
+      // userGreeting の変化を監視して、ログイン成功時に自動でゲームロビーへ遷移
+      const observer = new MutationObserver(() => {
+        if (isUserLoggedIn()) {
+          authView.classList.add('hidden');
+          aboutView.classList.add('hidden');
+          profileView.classList.add('hidden');
+          lobbyView.classList.remove('hidden');
+          navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === 'lobby'));
+        } else {
+          enforceAuthGate(false);
+        }
+      });
+      observer.observe(userGreeting, { childList: true, characterData: true, subtree: true });
+
+      // 上部ナビゲーションクリック時のログイン必須チェック（「システム概要」のみ閲覧可）
+      navBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          const targetView = this.dataset.view;
+          if (targetView !== 'about' && !isUserLoggedIn()) {
+            e.stopImmediatePropagation();
+            enforceAuthGate(true);
+          }
+        }, true);
+      });
+
+      // 「新規登録」クリック時に利用規約のチェック状態を最優先で検証（キャプチャフェーズ）
+      signupBtn.addEventListener('click', function(e) {
+        if (!termsCheckbox.checked) {
+          e.stopImmediatePropagation();
+          authMessage.style.color = '#f87171';
+          authMessage.textContent = '⚠️ 新規登録を行うには「利用規約・プライバシーポリシー」にチェックを入れて同意してください。';
+          return;
+        }
+      }, true);
+
+      // エラーメッセージの日本語変換（User already registered 等を分かりやすく表示）
+      const msgObserver = new MutationObserver(() => {
+        const raw = authMessage.textContent || '';
+        if (raw.includes('User already registered') || raw.includes('already been registered')) {
+          authMessage.style.color = '#fbbf24';
+          authMessage.textContent = '⚠️ このメールアドレスは既に登録済みです。左側の「ログイン」ボタンからログインしてください。';
+        } else if (raw.includes('Invalid login credentials')) {
+          authMessage.style.color = '#f87171';
+          authMessage.textContent = '❌ メールアドレスまたはパスワードが正しくありません。';
+        } else if (raw.includes('Password should be at least')) {
+          authMessage.style.color = '#f87171';
+          authMessage.textContent = '⚠️ パスワードは6文字以上で入力してください。';
+        }
+      });
+      msgObserver.observe(authMessage, { childList: true, characterData: true, subtree: true });
+    })();
+  </script>
+
+  <!-- 2. ゲーム切り替え＆中央全画面起動スクリプト -->
   <script>
     (function() {
       const catalogItems = document.querySelectorAll('#game-catalog-list .menu-item');
@@ -214,7 +350,6 @@
         }
       };
 
-      // iframe 内のキャンバスを強制的に画面中央へ配置するスタイル注入
       function centerIframeContent(iframe) {
         try {
           const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -249,7 +384,6 @@
         } catch (e) {}
       }
 
-      // 1. 左側メニュー選択時（ロビー画面のままプレビュー表示・まだ全画面にはしない）
       function selectGameInLobby(gameKey) {
         const cfg = gameConfigs[gameKey];
         if (!cfg) return;
@@ -285,7 +419,6 @@
         }
       }
 
-      // 2. 「ゲーム開始」クリック時に初めて全画面オーバーレイを起動
       function launchSelectedExternalGame() {
         const cfg = gameConfigs[currentSelectedGame];
         if (!cfg || cfg.type !== 'external') return;
@@ -308,7 +441,6 @@
         }
       }
 
-      // 3. 「ロビーへ戻る」で全画面を閉じる（選択中のゲームプレビュー状態に戻る）
       function closeFullscreenGame() {
         overlay.style.display = 'none';
         document.body.style.overflow = '';
