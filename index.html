@@ -51,46 +51,32 @@
     <p id="auth-message" class="msg"></p>
   </div>
 
-  <!-- 独立视图 2：游戏大厅（テトリス / スーパーマリオ / パックマン） -->
+  <!-- 独立视图 2：游戏大厅 -->
   <main id="view-lobby" class="main-layout">
     <aside class="card">
       <div class="sidebar-title">ゲームカタログ</div>
       <ul class="menu-list" id="game-catalog-list">
         <li class="menu-item active" data-game="tetris">🧱 テトリス</li>
-        <li class="menu-item" data-game="mario">🍄 スーパーマリオ</li>
-        <li class="menu-item" data-game="pacman">👾 パックマン</li>
+        <li class="menu-item" data-game="mario">🍄 スーパーマリオ <span style="font-size:0.75rem; opacity:0.8;">(全画面)</span></li>
+        <li class="menu-item" data-game="pacman">👾 パックマン <span style="font-size:0.75rem; opacity:0.8;">(全画面)</span></li>
       </ul>
     </aside>
 
-    <section class="card game-stage" id="game-stage-container" style="min-width:0; overflow:hidden;">
-      <div class="stage-header" style="flex-wrap:wrap; gap:8px;">
-        <h2 id="stage-game-title" style="font-size:1.15rem; margin:0;">🧱 テトリス</h2>
-        <div style="display:flex; gap:8px; flex-shrink:0;">
+    <section class="card game-stage" id="game-stage-container">
+      <div class="stage-header">
+        <h2>🧱 テトリス (Tetris)</h2>
+        <div style="display:flex; gap:8px;">
           <button id="fullscreen-btn" class="secondary">⛶ 全画面</button>
           <button id="start-game-btn" class="primary">ゲーム開始</button>
-          <button id="reload-external-btn" class="primary hidden">🔄 リセット</button>
         </div>
       </div>
 
-      <!-- テトリス専用スコアバー -->
-      <div id="tetris-stats-bar" class="stats-bar">
+      <div class="stats-bar">
         <span>現在のスコア: <strong id="score-val" style="color: var(--accent);">0</strong></span>
         <span>自己ベスト: <strong id="best-val" style="color: var(--green);">0</strong></span>
       </div>
 
-      <!-- テトリス画布 -->
       <canvas id="tetris-canvas" width="240" height="400"></canvas>
-
-      <!-- 外部HTML5ゲームコンテナ（スーパーマリオ / パックマン） -->
-      <div id="external-game-wrapper" class="hidden" style="width:100%; justify-content:center; align-items:center; background:#000; border-radius:8px; overflow:hidden; margin:10px 0;">
-        <iframe
-          id="external-game-frame"
-          src="about:blank"
-          style="width:100%; height:440px; border:none; display:block; background:#000;"
-          allowfullscreen
-        ></iframe>
-      </div>
-
       <div id="controls-hint" class="controls-hint">
         操作方法：← → 移動 / ↑ 回転 / ↓ 落下加速 / スペース 一気に落下
       </div>
@@ -133,106 +119,132 @@
     </p>
   </section>
 
+  <!-- 全画面ゲームオーバーレイ（スーパーマリオ / パックマン用・画面全体表示） -->
+  <div id="fullscreen-game-overlay" style="display:none; position:fixed; inset:0; width:100vw; height:100vh; background:#000; z-index:9999; flex-direction:column;">
+    <!-- 顶部半透明控制条 -->
+    <div style="height:48px; padding:0 16px; background:rgba(15,23,42,0.92); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <strong id="fs-game-title" style="color:#fff; font-size:1rem;">🍄 スーパーマリオ</strong>
+        <span id="fs-game-hint" style="color:#94a3b8; font-size:0.82rem;">S: スタート・ジャンプ / ← →: 移動 / A: ダッシュ・ファイア</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="fs-native-btn" class="secondary" style="padding:5px 12px; font-size:0.85rem;">⛶ モニター全画面</button>
+        <button id="fs-reload-btn" class="primary" style="padding:5px 12px; font-size:0.85rem;">🔄 リセット</button>
+        <button id="fs-close-btn" class="danger" style="padding:5px 12px; font-size:0.85rem;">✕ ロビーへ戻る</button>
+      </div>
+    </div>
+
+    <!-- 全屏游戏画布区域 -->
+    <div style="flex:1; width:100%; height:calc(100vh - 48px); display:flex; justify-content:center; align-items:center; overflow:hidden; background:#000;">
+      <iframe
+        id="fs-game-frame"
+        src="about:blank"
+        style="width:100%; height:100%; border:none; display:block; background:#000;"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </div>
+
   <script src="js/supabase-client.js"></script>
   <script src="js/games/tetris.js"></script>
   <script src="js/app.js"></script>
 
-  <!-- 多ゲーム切り替え制御スクリプト（スーパーマリオ / パックマン統合） -->
+  <!-- 全画面ゲーム起動・復帰スクリプト -->
   <script>
     (function() {
       const catalogItems = document.querySelectorAll('#game-catalog-list .menu-item');
-      const stageTitle = document.getElementById('stage-game-title');
-      const startTetrisBtn = document.getElementById('start-game-btn');
-      const reloadExternalBtn = document.getElementById('reload-external-btn');
-      const tetrisStatsBar = document.getElementById('tetris-stats-bar');
-      const tetrisCanvas = document.getElementById('tetris-canvas');
-      const externalWrapper = document.getElementById('external-game-wrapper');
-      const externalFrame = document.getElementById('external-game-frame');
-      const controlsHint = document.getElementById('controls-hint');
+      const overlay = document.getElementById('fullscreen-game-overlay');
+      const fsTitle = document.getElementById('fs-game-title');
+      const fsHint = document.getElementById('fs-game-hint');
+      const fsFrame = document.getElementById('fs-game-frame');
+      const fsNativeBtn = document.getElementById('fs-native-btn');
+      const fsReloadBtn = document.getElementById('fs-reload-btn');
+      const fsCloseBtn = document.getElementById('fs-close-btn');
 
-      const gameConfigs = {
-        tetris: {
-          title: '🧱 テトリス',
-          hint: '操作方法：← → 移動 / ↑ 回転 / ↓ 落下加速 / スペース 一気に落下',
-          type: 'canvas'
-        },
+      const externalGames = {
         mario: {
-          title: '🍄 スーパーマリオ',
-          hint: '操作方法：S スタート・ジャンプ / ← → 移動 / A ダッシュ・ファイア（画面クリック後に操作）',
-          type: 'iframe',
+          title: '🍄 スーパーマリオ (Super Mario)',
+          hint: '操作：S スタート・ジャンプ / ← → 移動 / A ダッシュ・ファイア',
           src: './mario/main.html'
         },
         pacman: {
-          title: '👾 パックマン',
-          hint: '操作方法：← ↑ ↓ → 方向キーで移動',
-          type: 'iframe',
+          title: '👾 パックマン (Pac-Man)',
+          hint: '操作：← ↑ ↓ → 方向キーで移動',
           src: './pacman.html'
         }
       };
 
-      function switchGame(gameKey) {
-        const cfg = gameConfigs[gameKey];
+      function openFullscreenGame(gameKey) {
+        const cfg = externalGames[gameKey];
         if (!cfg) return;
 
-        catalogItems.forEach(item => {
-          item.classList.toggle('active', item.dataset.game === gameKey);
-        });
+        fsTitle.textContent = cfg.title;
+        fsHint.textContent = cfg.hint;
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
 
-        stageTitle.textContent = cfg.title;
-        controlsHint.textContent = cfg.hint;
+        fsFrame.src = cfg.src;
+        fsFrame.onload = function() {
+          try {
+            fsFrame.contentWindow.focus();
+          } catch (e) {}
+        };
 
-        if (cfg.type === 'canvas') {
-          externalWrapper.classList.add('hidden');
-          externalWrapper.style.display = 'none';
-          externalFrame.src = 'about:blank';
-          tetrisStatsBar.classList.remove('hidden');
-          tetrisCanvas.classList.remove('hidden');
-          startTetrisBtn.classList.remove('hidden');
-          reloadExternalBtn.classList.add('hidden');
-        } else {
-          tetrisStatsBar.classList.add('hidden');
-          tetrisCanvas.classList.add('hidden');
-          startTetrisBtn.classList.add('hidden');
-          reloadExternalBtn.classList.remove('hidden');
-
-          // 关键修复：移除 .hidden (!important) 并设置 flex 居中
-          externalWrapper.classList.remove('hidden');
-          externalWrapper.style.display = 'flex';
-          externalFrame.src = cfg.src;
-
-          externalFrame.onload = function() {
-            try {
-              externalFrame.contentWindow.focus();
-            } catch (e) {}
-          };
+        // 尝试同时触发浏览器原生全屏
+        if (overlay.requestFullscreen && !document.fullscreenElement) {
+          overlay.requestFullscreen().catch(() => {});
         }
+      }
+
+      function closeFullscreenGame() {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        fsFrame.src = 'about:blank';
+
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+
+        // 左侧菜单恢复高亮「テトリス」
+        catalogItems.forEach(item => {
+          item.classList.toggle('active', item.dataset.game === 'tetris');
+        });
       }
 
       catalogItems.forEach(item => {
         item.addEventListener('click', function() {
-          switchGame(this.dataset.game);
+          const gameKey = this.dataset.game;
+          if (gameKey === 'tetris') {
+            closeFullscreenGame();
+          } else {
+            openFullscreenGame(gameKey);
+          }
         });
       });
 
-      reloadExternalBtn.addEventListener('click', function() {
-        if (externalFrame.src && externalFrame.src !== 'about:blank') {
-          const currentSrc = externalFrame.src;
-          externalFrame.src = 'about:blank';
+      // 手动切换显示器硬件全屏
+      fsNativeBtn.addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+          overlay.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+        try { fsFrame.contentWindow.focus(); } catch (e) {}
+      });
+
+      // 重置游戏
+      fsReloadBtn.addEventListener('click', function() {
+        const currentSrc = fsFrame.src;
+        if (currentSrc && currentSrc !== 'about:blank') {
+          fsFrame.src = 'about:blank';
           setTimeout(() => {
-            externalFrame.src = currentSrc;
+            fsFrame.src = currentSrc;
           }, 50);
         }
       });
 
-      // 防止方向键和空格键触发外部网页上下滚动
-      window.addEventListener('keydown', function(e) {
-        const activeItem = document.querySelector('#game-catalog-list .menu-item.active');
-        if (activeItem && activeItem.dataset.game !== 'tetris') {
-          if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
-            e.preventDefault();
-          }
-        }
-      }, { passive: false });
+      // 返回游戏大厅
+      fsCloseBtn.addEventListener('click', closeFullscreenGame);
     })();
   </script>
 </body>
