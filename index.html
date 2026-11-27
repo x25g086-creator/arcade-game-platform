@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arcade Cloud - クラウドゲームプラットフォーム</title>
+  <title>Arcade Cloud</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -27,10 +27,10 @@
     </div>
   </header>
 
-  <!-- 独立视图 1：登录 / 注册切换页面（清晰区分两个模式） -->
+  <!-- 独立视图 1：极简登录 / 注册卡片 -->
   <div id="auth-view" class="auth-box">
-    <!-- 模式切换 Tab -->
-    <div style="display:flex; background:#0f172a; padding:4px; border-radius:10px; margin-bottom:18px; border:1px solid #334155;">
+    <!-- 顶部切换 Tab -->
+    <div style="display:flex; background:#0f172a; padding:4px; border-radius:10px; margin-bottom:20px; border:1px solid #334155;">
       <button type="button" id="tab-login-mode" style="flex:1; padding:8px 12px; border:none; border-radius:7px; font-weight:bold; cursor:pointer; background:#38bdf8; color:#0f172a; transition:0.2s;">
         🔑 ログイン
       </button>
@@ -39,14 +39,7 @@
       </button>
     </div>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <h2 id="auth-mode-title" style="margin:0;">アカウントログイン</h2>
-      <span id="auth-mode-badge" style="font-size:0.75rem; padding:3px 9px; background:rgba(56,189,248,0.15); color:#38bdf8; border-radius:999px;">既存会員</span>
-    </div>
-
-    <p id="auth-mode-desc" style="font-size:0.85rem; color:var(--muted); margin-bottom:16px; line-height:1.5;">
-      登録済みのメールアドレスとパスワードを入力してゲームロビーへ進んでください。
-    </p>
+    <h2 id="auth-mode-title" style="margin:0 0 18px 0; font-size:1.25rem;">ログイン</h2>
 
     <div class="form-group">
       <label>メールアドレス</label>
@@ -57,54 +50,49 @@
       <input type="password" id="password-input" placeholder="••••••" />
     </div>
 
-    <!-- 仅在「新規登録」模式下显示的利用規約勾选框 -->
-    <div id="signup-terms-box" style="display:none; margin:14px 0 16px 0; padding:10px 12px; background:rgba(15,23,42,0.8); border:1px solid #334155; border-radius:8px; font-size:0.83rem;">
-      <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin:0; color:#e2e8f0;">
-        <input type="checkbox" id="terms-checkbox" style="width:16px; height:16px; margin-top:2px; accent-color:#22c55e; cursor:pointer;" />
+    <!-- 利用規約勾选框（放在登录页，所有详细说明收在弹窗内） -->
+    <div id="terms-row" style="margin:14px 0 18px 0; font-size:0.85rem; color:#cbd5e1;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+        <input type="checkbox" id="terms-checkbox" style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
         <span>
-          <a href="javascript:void(0)" id="open-terms-modal" style="color:#38bdf8; text-decoration:underline;">利用規約・プライバシーポリシー</a>に同意します
+          <a href="javascript:void(0)" id="open-terms-modal" style="color:#38bdf8; text-decoration:underline;">利用規約</a>に同意する
         </span>
       </label>
     </div>
 
-    <!-- 登录按钮（仅登录模式显示） -->
+    <!-- 登录按钮 -->
     <button type="button" id="login-submit" class="primary" style="width:100%; padding:11px; font-size:0.95rem; font-weight:bold;">
-      🔑 ログインしてゲーム開始
+      ログイン
     </button>
 
-    <!-- 注册按钮（仅注册模式显示） -->
+    <!-- 注册按钮 -->
     <button type="button" id="signup-submit" style="display:none; width:100%; padding:11px; font-size:0.95rem; font-weight:bold; border:none; border-radius:8px; background:#22c55e; color:#052e16; cursor:pointer;">
-      📝 この内容で新規登録する
+      新規登録
     </button>
 
-    <!-- 底部快速切换引导 -->
-    <div style="margin-top:14px; text-align:center; font-size:0.83rem; color:#94a3b8;">
-      <span id="switch-hint-text">アカウントをお持ちでない方は</span>
-      <a href="javascript:void(0)" id="switch-mode-link" style="color:#38bdf8; text-decoration:underline; margin-left:4px;">新規登録はこちら</a>
-    </div>
-
-    <p id="auth-message" class="msg" style="margin-top:12px; line-height:1.5; font-weight:500;"></p>
+    <p id="auth-message" class="msg" style="margin-top:12px; line-height:1.5; font-size:0.86rem;"></p>
   </div>
 
-  <!-- 简明利用規約弹窗 -->
+  <!-- 利用規約弹窗（所有详细说明均收纳于此） -->
   <div id="terms-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:10000; justify-content:center; align-items:center; padding:16px;">
     <div class="card" style="max-width:460px; width:100%; padding:20px; border:1px solid #334155;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h3 style="margin:0; font-size:1.05rem;">📜 Arcade Cloud 利用規約</h3>
+        <h3 style="margin:0; font-size:1.05rem;">📜 利用規約・ご利用案内</h3>
         <button id="close-terms-modal" class="secondary" style="padding:4px 10px;">✕</button>
       </div>
-      <div style="font-size:0.84rem; color:#cbd5e1; line-height:1.65; max-height:240px; overflow-y:auto; padding-right:4px;">
-        <p style="margin-top:0;">1. <strong>アカウント管理</strong>：登録されたメールアドレスおよびパスワードは、ゲーム戦績・ランキングのクラウド同期のみに使用されます。</p>
-        <p>2. <strong>適正利用</strong>：不正なスコア改ざんやサーバーへの過度な負荷をかける行為は禁止されています。</p>
-        <p style="margin-bottom:0;">3. <strong>免責事項</strong>：本プラットフォームは学習・個人利用目的で提供されており、予告なく仕様を変更する場合があります。</p>
+      <div style="font-size:0.84rem; color:#cbd5e1; line-height:1.65; max-height:260px; overflow-y:auto; padding-right:4px;">
+        <p style="margin-top:0;">1. <strong>利用条件</strong>：ゲームロビーの利用にはアカウント登録（メールアドレス・6文字以上のパスワード）およびログインが必要です。</p>
+        <p>2. <strong>データ管理</strong>：登録情報はアカウント認証およびゲーム戦績・ランキングのクラウド保存のみに使用されます。</p>
+        <p>3. <strong>禁止事項</strong>：不正なスコア改ざんやシステムへの過度な負荷をかける行為は禁止されています。</p>
+        <p style="margin-bottom:0;">4. <strong>免責事項</strong>：本サービスは学習・個人利用目的で提供されており、予告なく仕様を変更する場合があります。</p>
       </div>
-      <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+      <div style="margin-top:16px; display:flex; justify-content:flex-end;">
         <button id="agree-terms-btn" class="primary" style="padding:6px 16px;">同意して閉じる</button>
       </div>
     </div>
   </div>
 
-  <!-- 独立视图 2：游戏大厅（登录成功後に自動表示） -->
+  <!-- 独立视图 2：游戏大厅 -->
   <main id="view-lobby" class="main-layout hidden">
     <aside class="card">
       <div class="sidebar-title">ゲームカタログ</div>
@@ -134,10 +122,7 @@
 
       <div id="external-preview-box" class="hidden" style="width:100%; height:400px; background:#070b14; border:1px solid #1e293b; border-radius:8px; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:24px; margin:8px 0;">
         <div id="preview-icon" style="font-size:3.5rem; margin-bottom:12px;">🍄</div>
-        <h3 id="preview-title" style="margin:0 0 8px 0; color:#f8fafc;">スーパーマリオ (Super Mario)</h3>
-        <p id="preview-desc" style="color:#94a3b8; font-size:0.88rem; max-width:320px; line-height:1.6; margin:0 0 18px 0;">
-          上の「▶ ゲーム開始」ボタンを押すと全画面モードで起動します。
-        </p>
+        <h3 id="preview-title" style="margin:0 0 16px 0; color:#f8fafc;">スーパーマリオ (Super Mario)</h3>
         <button id="preview-center-start-btn" class="primary" style="padding:10px 24px; font-size:0.95rem;">▶ ゲーム開始（全画面）</button>
       </div>
 
@@ -159,13 +144,13 @@
 
   <!-- 独立视图 3：个人中心 -->
   <section id="view-profile" class="card hidden" style="max-width:900px; margin:24px auto; width:92%;">
-    <h2>👤 プレイヤープロフィール＆戦績</h2>
+    <h2>👤 マイページ</h2>
     <div id="profile-guest-notice" style="margin-top:12px; padding:12px; background:#0f172a; border-radius:8px; color:#fbbf24; font-size:0.9rem;">
-      現在ゲストとしてプレイ中です。戦績をクラウドに保存するにはログインしてください。
+      ゲストモードです。
     </div>
     <div id="profile-details" class="profile-grid hidden">
       <div class="stat-box">
-        <div class="stat-label">登録アカウント</div>
+        <div class="stat-label">アカウント</div>
         <div id="prof-email" class="stat-num" style="font-size:1.05rem;">-</div>
       </div>
       <div class="stat-box">
@@ -179,7 +164,7 @@
   <section id="view-about" class="card hidden" style="max-width:900px; margin:24px auto; width:92%;">
     <h2>📖 システム概要</h2>
     <p style="margin-top:10px; color:var(--muted); font-size:0.92rem;">
-      ブラウザのみで動作するクラウドアーケードプラットフォーム。Supabase Auth・PostgreSQL・Storageによりアカウント認証とランキング同期を実現しています。
+      ブラウザのみで動作するクラウドアーケードプラットフォーム（Supabase Auth / PostgreSQL / Storage 連携）。
     </p>
   </section>
 
@@ -211,7 +196,7 @@
   <script src="js/games/tetris.js"></script>
   <script src="js/app.js"></script>
 
-  <!-- 1. ログイン / 新規登録 独立画面切り替え・ダイレクト認証・自動遷移制御 -->
+  <!-- 1. シンプル認証・利用規約チェック・自動画面遷移スクリプト -->
   <script>
     (function() {
       const authView = document.getElementById('auth-view');
@@ -222,12 +207,8 @@
       const tabLoginBtn = document.getElementById('tab-login-mode');
       const tabSignupBtn = document.getElementById('tab-signup-mode');
       const modeTitle = document.getElementById('auth-mode-title');
-      const modeBadge = document.getElementById('auth-mode-badge');
-      const modeDesc = document.getElementById('auth-mode-desc');
-      const signupTermsBox = document.getElementById('signup-terms-box');
+      const termsRow = document.getElementById('terms-row');
       const termsCheckbox = document.getElementById('terms-checkbox');
-      const switchHintText = document.getElementById('switch-hint-text');
-      const switchModeLink = document.getElementById('switch-mode-link');
 
       const emailInput = document.getElementById('email-input');
       const passwordInput = document.getElementById('password-input');
@@ -240,11 +221,8 @@
       const logoutBtn = document.getElementById('logout-btn');
       const navBtns = document.querySelectorAll('.nav-btn');
 
-      let currentAuthMode = 'login'; // 'login' | 'signup'
-
-      // ログイン画面と新規登録画面のビジュアル切り替え
+      // ログイン画面と新規登録画面の切り替え
       function setAuthMode(mode) {
-        currentAuthMode = mode;
         authMessage.textContent = '';
 
         if (mode === 'login') {
@@ -253,44 +231,25 @@
           tabSignupBtn.style.background = 'transparent';
           tabSignupBtn.style.color = '#94a3b8';
 
-          modeTitle.textContent = 'アカウントログイン';
-          modeBadge.textContent = '既存会員';
-          modeBadge.style.background = 'rgba(56,189,248,0.15)';
-          modeBadge.style.color = '#38bdf8';
-          modeDesc.textContent = '登録済みのメールアドレスとパスワードを入力してゲームロビーへ進んでください。';
-
-          signupTermsBox.style.display = 'none';
+          modeTitle.textContent = 'ログイン';
+          termsRow.style.display = 'block';
           loginBtn.style.display = 'block';
           signupBtn.style.display = 'none';
-
-          switchHintText.textContent = 'アカウントをお持ちでない方は';
-          switchModeLink.textContent = '新規登録はこちら';
         } else {
           tabSignupBtn.style.background = '#22c55e';
           tabSignupBtn.style.color = '#052e16';
           tabLoginBtn.style.background = 'transparent';
           tabLoginBtn.style.color = '#94a3b8';
 
-          modeTitle.textContent = '新規アカウント登録';
-          modeBadge.textContent = '新規作成';
-          modeBadge.style.background = 'rgba(34,197,94,0.18)';
-          modeBadge.style.color = '#4ade80';
-          modeDesc.textContent = 'メールアドレスとパスワード（6文字以上）を設定し、利用規約に同意して登録してください。';
-
-          signupTermsBox.style.display = 'block';
+          modeTitle.textContent = '新規登録';
+          termsRow.style.display = 'none';
           loginBtn.style.display = 'none';
           signupBtn.style.display = 'block';
-
-          switchHintText.textContent = 'すでにアカウントをお持ちの方は';
-          switchModeLink.textContent = 'ログイン画面へ戻る';
         }
       }
 
       tabLoginBtn.addEventListener('click', () => setAuthMode('login'));
       tabSignupBtn.addEventListener('click', () => setAuthMode('signup'));
-      switchModeLink.addEventListener('click', () => {
-        setAuthMode(currentAuthMode === 'login' ? 'signup' : 'login');
-      });
 
       // 利用規約モーダル
       const termsModal = document.getElementById('terms-modal');
@@ -306,12 +265,10 @@
         authMessage.textContent = '';
       });
 
-      // Supabase クライアント取得ヘルパー
       function getSbClient() {
         return window.supabaseClient || window._supabase || window.sb || null;
       }
 
-      // ログイン完了後に確実にロビーへ遷移させる関数
       function enterLobbyAsUser(email) {
         if (email) {
           userGreeting.textContent = email;
@@ -332,7 +289,7 @@
         return txt !== '' && txt !== 'ゲストモード';
       }
 
-      // ページ読み込み時に既存セッションを確認
+      // 初期セッション確認
       setTimeout(async () => {
         const sb = getSbClient();
         if (sb && sb.auth) {
@@ -350,7 +307,7 @@
         }
       }, 200);
 
-      // 「ログイン」ボタン処理（確実に発火してロビーへ遷移）
+      // ログイン処理（利用規約チェック付き）
       loginBtn.addEventListener('click', async function(e) {
         e.stopImmediatePropagation();
         const email = emailInput.value.trim();
@@ -358,68 +315,54 @@
 
         if (!email || !password) {
           authMessage.style.color = '#f87171';
-          authMessage.textContent = '⚠️ メールアドレスとパスワードを入力してください。';
+          authMessage.textContent = 'メールアドレスとパスワードを入力してください。';
+          return;
+        }
+        if (!termsCheckbox.checked) {
+          authMessage.style.color = '#f87171';
+          authMessage.textContent = '利用規約に同意してください。';
           return;
         }
 
         const sb = getSbClient();
-        if (!sb || !sb.auth) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = '❌ 認証クライアントの初期化に失敗しました。ページを再読み込みしてください。';
-          return;
-        }
+        if (!sb || !sb.auth) return;
 
         loginBtn.disabled = true;
         loginBtn.textContent = 'ログイン中...';
-        authMessage.style.color = '#38bdf8';
-        authMessage.textContent = '認証情報を確認しています...';
+        authMessage.textContent = '';
 
         try {
           const { data, error } = await sb.auth.signInWithPassword({ email, password });
           if (error) {
             authMessage.style.color = '#f87171';
             if (error.message.includes('Invalid login credentials')) {
-              authMessage.textContent = '❌ メールアドレスまたはパスワードが間違っています。';
+              authMessage.textContent = 'メールアドレスまたはパスワードが正しくありません。';
             } else if (error.message.includes('Email not confirmed')) {
-              authMessage.textContent = '⚠️ メール認証が未完了です。受信トレイの確認リンクをクリックしてください。';
+              authMessage.textContent = 'メール認証が未完了です。受信メールをご確認ください。';
             } else {
-              authMessage.textContent = '❌ ログイン失敗: ' + error.message;
+              authMessage.textContent = 'ログイン失敗: ' + error.message;
             }
           } else if (data && data.user) {
-            authMessage.style.color = '#4ade80';
-            authMessage.textContent = '✅ ログイン成功！ゲームロビーへ移動します...';
-            setTimeout(() => {
-              enterLobbyAsUser(data.user.email);
-            }, 350);
+            enterLobbyAsUser(data.user.email);
           }
         } catch (err) {
           authMessage.style.color = '#f87171';
-          authMessage.textContent = '❌ 通信エラーが発生しました。';
+          authMessage.textContent = '通信エラーが発生しました。';
         } finally {
           loginBtn.disabled = false;
-          loginBtn.textContent = '🔑 ログインしてゲーム開始';
+          loginBtn.textContent = 'ログイン';
         }
       }, true);
 
-      // 「新規登録」ボタン処理（規約チェック -> 登録 -> 自動でログイン画面へ戻る）
+      // 新規登録処理（完了後、自動でログインページへ戻る）
       signupBtn.addEventListener('click', async function(e) {
         e.stopImmediatePropagation();
         const email = emailInput.value.trim();
         const password = passwordInput.value;
 
-        if (!email || !password) {
+        if (!email || password.length < 6) {
           authMessage.style.color = '#f87171';
-          authMessage.textContent = '⚠️ メールアドレスとパスワード（6文字以上）を入力してください。';
-          return;
-        }
-        if (password.length < 6) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = '⚠️ パスワードは6文字以上で設定してください。';
-          return;
-        }
-        if (!termsCheckbox.checked) {
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = '⚠️ 「利用規約・プライバシーポリシー」にチェックを入れて同意してください。';
+          authMessage.textContent = 'メールアドレスと6文字以上のパスワードを入力してください。';
           return;
         }
 
@@ -427,45 +370,35 @@
         if (!sb || !sb.auth) return;
 
         signupBtn.disabled = true;
-        signupBtn.textContent = '登録処理中...';
-        authMessage.style.color = '#38bdf8';
-        authMessage.textContent = 'アカウントを作成しています...';
+        signupBtn.textContent = '登録中...';
+        authMessage.textContent = '';
 
         try {
           const { data, error } = await sb.auth.signUp({ email, password });
           if (error) {
             if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+              setAuthMode('login');
               authMessage.style.color = '#fbbf24';
-              authMessage.textContent = '⚠️ このメールアドレスは既に登録済みです。ログイン画面へ切り替えます...';
-              setTimeout(() => {
-                setAuthMode('login');
-                authMessage.style.color = '#fbbf24';
-                authMessage.textContent = '⚠️ 既に登録済みのアカウントです。そのままログインしてください。';
-              }, 1200);
+              authMessage.textContent = 'このメールアドレスは既に登録済みです。ログインしてください。';
             } else {
               authMessage.style.color = '#f87171';
-              authMessage.textContent = '❌ 登録失敗: ' + error.message;
+              authMessage.textContent = '登録失敗: ' + error.message;
             }
           } else {
-            // 登録成功後、ログイン状態になっていれば一度サインアウトしてログイン画面へ戻す
             if (data && data.session) {
               await sb.auth.signOut();
             }
+            setAuthMode('login');
+            passwordInput.value = '';
             authMessage.style.color = '#4ade80';
-            authMessage.textContent = '✅ 新規登録が完了しました！自動的にログイン画面へ戻ります...';
-            setTimeout(() => {
-              setAuthMode('login');
-              passwordInput.value = '';
-              authMessage.style.color = '#4ade80';
-              authMessage.textContent = '✅ 登録完了！パスワードを入力してログインしてください。';
-            }, 1200);
+            authMessage.textContent = '登録が完了しました。ログインしてください。';
           }
         } catch (err) {
           authMessage.style.color = '#f87171';
-          authMessage.textContent = '❌ 通信エラーが発生しました。';
+          authMessage.textContent = '通信エラーが発生しました。';
         } finally {
           signupBtn.disabled = false;
-          signupBtn.textContent = '📝 この内容で新規登録する';
+          signupBtn.textContent = '新規登録';
         }
       }, true);
 
@@ -479,8 +412,6 @@
             profileView.classList.add('hidden');
             aboutView.classList.add('hidden');
             authView.classList.remove('hidden');
-            authMessage.style.color = '#fbbf24';
-            authMessage.textContent = '⚠️ ゲームをプレイするには、まずログインしてください。';
           }
         }, true);
       });
@@ -500,7 +431,6 @@
       const previewBox = document.getElementById('external-preview-box');
       const previewIcon = document.getElementById('preview-icon');
       const previewTitle = document.getElementById('preview-title');
-      const previewDesc = document.getElementById('preview-desc');
       const previewCenterStartBtn = document.getElementById('preview-center-start-btn');
       const controlsHint = document.getElementById('controls-hint');
 
@@ -524,7 +454,6 @@
           icon: '🍄',
           title: '🍄 スーパーマリオ (Super Mario)',
           shortTitle: 'スーパーマリオ (Super Mario)',
-          desc: '懐かしの横スクロールアクション！全画面モードで快適にプレイできます。',
           hint: '操作方法：S スタート・ジャンプ / ← → 移動 / A ダッシュ・ファイア',
           type: 'external',
           src: './mario/main.html'
@@ -533,7 +462,6 @@
           icon: '👾',
           title: '👾 パックマン (Pac-Man)',
           shortTitle: 'パックマン (Pac-Man)',
-          desc: 'クラシックアーケードの迷路アクション！全画面モードで起動します。',
           hint: '操作方法：← ↑ ↓ → 方向キーで移動',
           type: 'external',
           src: './pacman.html'
@@ -569,7 +497,6 @@
 
           previewIcon.textContent = cfg.icon;
           previewTitle.textContent = cfg.shortTitle;
-          previewDesc.textContent = cfg.desc;
           previewBox.classList.remove('hidden');
           previewBox.style.display = 'flex';
         }
