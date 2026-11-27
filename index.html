@@ -27,7 +27,7 @@
     </div>
   </header>
 
-  <!-- 独立视图 1：极简登录 / 注册卡片（完全复用原版 app.js 的登录/注册逻辑） -->
+  <!-- 独立视图 1：极简登录 / 注册卡片 -->
   <div id="auth-view" class="auth-box">
     <!-- 顶部切换 Tab -->
     <div style="display:flex; background:#0f172a; padding:4px; border-radius:10px; margin-bottom:20px; border:1px solid #334155;">
@@ -50,7 +50,7 @@
       <input type="password" id="password-input" placeholder="••••••" />
     </div>
 
-    <!-- 利用規約勾选框（放在登录页，详细说明收纳在弹窗中） -->
+    <!-- 利用規約勾选框（放在登录页，所有详细说明收纳在弹窗中） -->
     <div id="terms-row" style="margin:14px 0 18px 0; font-size:0.85rem; color:#cbd5e1;">
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
         <input type="checkbox" id="terms-checkbox" style="width:16px; height:16px; accent-color:#38bdf8; cursor:pointer;" />
@@ -60,15 +60,16 @@
       </label>
     </div>
 
-    <!-- 原版 app.js 绑定的登录与注册按钮 -->
-    <button id="login-submit" class="primary" style="width:100%; padding:11px; font-size:0.95rem; font-weight:bold;">
+    <!-- 登录与注册按钮 -->
+    <button type="button" id="login-submit" class="primary" style="width:100%; padding:11px; font-size:0.95rem; font-weight:bold;">
       ログイン
     </button>
-    <button id="signup-submit" class="secondary" style="display:none; width:100%; padding:11px; font-size:0.95rem; font-weight:bold; background:#22c55e; color:#052e16; border:none;">
+    <button type="button" id="signup-submit" class="secondary" style="display:none; width:100%; padding:11px; font-size:0.95rem; font-weight:bold; background:#22c55e; color:#052e16; border:none;">
       新規登録
     </button>
 
-    <p id="auth-message" class="msg" style="margin-top:12px; line-height:1.5; font-size:0.86rem;"></p>
+    <!-- 反馈信息提示区 -->
+    <p id="auth-message" class="msg" style="margin-top:14px; line-height:1.5; font-size:0.88rem; min-height:22px;"></p>
   </div>
 
   <!-- 利用規約弹窗 -->
@@ -190,12 +191,11 @@
     </div>
   </div>
 
-  <!-- 原版核心脚本（保持原本的登录・注册・ランキング・テトリス通信完全不变） -->
   <script src="js/supabase-client.js"></script>
   <script src="js/games/tetris.js"></script>
   <script src="js/app.js"></script>
 
-  <!-- 1. UI モード切り替え・利用規約ガード・状態監視による自動遷移（原版 app.js を妨害しない軽量制御） -->
+  <!-- 1. 独立クリーン認証ハンドラ（旧 app.js のボタン干渉を剥離し確実に結果を表示） -->
   <script>
     (function() {
       const authView = document.getElementById('auth-view');
@@ -209,13 +209,30 @@
       const termsRow = document.getElementById('terms-row');
       const termsCheckbox = document.getElementById('terms-checkbox');
 
-      const loginBtn = document.getElementById('login-submit');
-      const signupBtn = document.getElementById('signup-submit');
+      const emailInput = document.getElementById('email-input');
+      const passwordInput = document.getElementById('password-input');
       const authMessage = document.getElementById('auth-message');
       const userGreeting = document.getElementById('user-greeting');
+      const authToggleBtn = document.getElementById('auth-toggle-btn');
+      const logoutBtn = document.getElementById('logout-btn');
       const navBtns = document.querySelectorAll('.nav-btn');
 
-      // ログイン画面と新規登録画面の切り替え
+      // 旧 app.js が登録した壊れたイベントを完全に除去するため、ボタンをクローン置換する
+      const oldLoginBtn = document.getElementById('login-submit');
+      const loginBtn = oldLoginBtn.cloneNode(true);
+      oldLoginBtn.parentNode.replaceChild(loginBtn, oldLoginBtn);
+
+      const oldSignupBtn = document.getElementById('signup-submit');
+      const signupBtn = oldSignupBtn.cloneNode(true);
+      oldSignupBtn.parentNode.replaceChild(signupBtn, oldSignupBtn);
+
+      function showMsg(text, color) {
+        authMessage.style.display = 'block';
+        authMessage.style.color = color || '#f87171';
+        authMessage.textContent = text;
+      }
+
+      // ログイン・新規登録の画面切り替え
       function setAuthMode(mode) {
         authMessage.textContent = '';
         if (mode === 'login') {
@@ -258,70 +275,178 @@
         authMessage.textContent = '';
       });
 
-      // 利用規約未チェック時のみログイン送信をブロック（チェック済みなら原版 app.js へそのまま通す）
-      loginBtn.addEventListener('click', function(e) {
-        if (!termsCheckbox.checked) {
-          e.stopImmediatePropagation();
-          authMessage.style.color = '#f87171';
-          authMessage.textContent = '利用規約に同意してください。';
+      function getSb() {
+        if (window.sbClient && window.sbClient.auth) return window.sbClient;
+        if (window.supabase && window.supabase.createClient) {
+          window.sbClient = window.supabase.createClient(
+            'https://tijekdtlvaukoftmwmip.supabase.co',
+            'sb_publishable_gSiLVFW65_xnHw_u1Hv-TQ_1tF-orL0'
+          );
+          return window.sbClient;
         }
-      }, true);
+        return null;
+      }
 
-      function isUserLoggedIn() {
+      function enterLobby(email) {
+        if (email) userGreeting.textContent = email;
+        authToggleBtn.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+
+        authView.classList.add('hidden');
+        aboutView.classList.add('hidden');
+        profileView.classList.add('hidden');
+        lobbyView.classList.remove('hidden');
+        navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === 'lobby'));
+      }
+
+      function isLoggedIn() {
         const txt = (userGreeting.textContent || '').trim();
         return txt !== '' && txt !== 'ゲストモード';
       }
 
-      function syncViewByAuthState() {
-        if (isUserLoggedIn()) {
-          authView.classList.add('hidden');
-          aboutView.classList.add('hidden');
-          profileView.classList.add('hidden');
-          lobbyView.classList.remove('hidden');
-          navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === 'lobby'));
-        } else {
-          lobbyView.classList.add('hidden');
-          profileView.classList.add('hidden');
-          authView.classList.remove('hidden');
+      // 初期ロード時に既存ログインセッションを確認
+      (async function initSessionCheck() {
+        const sb = getSb();
+        if (sb && sb.auth) {
+          try {
+            const { data } = await sb.auth.getSession();
+            if (data && data.session && data.session.user) {
+              enterLobby(data.session.user.email);
+              return;
+            }
+          } catch (e) {}
         }
-      }
+        lobbyView.classList.add('hidden');
+        profileView.classList.add('hidden');
+        authView.classList.remove('hidden');
+      })();
 
-      // 初期状態チェック
-      setTimeout(syncViewByAuthState, 150);
+      // ログイン実行
+      loginBtn.addEventListener('click', async function() {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
 
-      // 原版 app.js がログイン成功・ログアウトで userGreeting を書き換えたら即座に画面遷移
-      const userObserver = new MutationObserver(() => {
-        syncViewByAuthState();
+        if (!email || !password) {
+          showMsg('メールアドレスとパスワードを入力してください。', '#f87171');
+          return;
+        }
+        if (!termsCheckbox.checked) {
+          showMsg('利用規約にチェックを入れて同意してください。', '#f87171');
+          return;
+        }
+
+        const sb = getSb();
+        if (!sb) {
+          showMsg('Supabase に接続できません。ページを再読み込みしてください。', '#f87171');
+          return;
+        }
+
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'ログイン中...';
+        showMsg('認証中...', '#38bdf8');
+
+        try {
+          const { data, error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) {
+            if (error.message.includes('Invalid login credentials')) {
+              showMsg('メールアドレスまたはパスワードが間違っています。', '#f87171');
+            } else if (error.message.includes('Email not confirmed')) {
+              showMsg('メール認証が未完了です。受信メールのリンクを確認してください。', '#fbbf24');
+            } else {
+              showMsg('ログインエラー: ' + error.message, '#f87171');
+            }
+          } else if (data && data.user) {
+            showMsg('ログイン成功！', '#4ade80');
+            enterLobby(data.user.email);
+          } else {
+            showMsg('ログイン情報を取得できませんでした。', '#f87171');
+          }
+        } catch (err) {
+          showMsg('通信エラー: ' + (err.message || err), '#f87171');
+        } finally {
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'ログイン';
+        }
       });
-      userObserver.observe(userGreeting, { childList: true, characterData: true, subtree: true });
 
-      // 原版 app.js の登録結果メッセージを監視し、完了・既存登録なら自動でログイン画面へ戻す
-      const msgObserver = new MutationObserver(() => {
-        const msg = authMessage.textContent || '';
-        if (msg.includes('User already registered') || msg.includes('already been registered')) {
-          setAuthMode('login');
-          authMessage.style.color = '#fbbf24';
-          authMessage.textContent = 'このメールアドレスは既に登録済みです。ログインしてください。';
-        } else if (msg.includes('登録成功') || msg.includes('確認メール') || msg.includes('登録完了')) {
-          setTimeout(() => {
+      // 新規登録実行（完了後、自動的にログイン画面へ戻る）
+      signupBtn.addEventListener('click', async function() {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email) {
+          showMsg('メールアドレスを入力してください。', '#f87171');
+          return;
+        }
+        if (password.length < 6) {
+          showMsg('パスワードは6文字以上で入力してください。', '#f87171');
+          return;
+        }
+
+        const sb = getSb();
+        if (!sb) {
+          showMsg('Supabase に接続できません。ページを再読み込みしてください。', '#f87171');
+          return;
+        }
+
+        signupBtn.disabled = true;
+        signupBtn.textContent = '登録中...';
+        showMsg('登録処理中...', '#38bdf8');
+
+        try {
+          const { data, error } = await sb.auth.signUp({ email, password });
+          if (error) {
+            if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+              setAuthMode('login');
+              showMsg('このメールアドレスは既に登録済みです。ログインしてください。', '#fbbf24');
+            } else if (error.message.includes('Database error')) {
+              showMsg('データベース処理エラー: ' + error.message + '（Supabaseのトリガー設定を確認してください）', '#f87171');
+            } else {
+              showMsg('登録エラー: ' + error.message, '#f87171');
+            }
+          } else {
+            if (data && data.session) {
+              await sb.auth.signOut();
+            }
             setAuthMode('login');
-            authMessage.style.color = '#4ade80';
-            authMessage.textContent = '登録が完了しました。ログインしてください。';
-          }, 800);
+            passwordInput.value = '';
+            showMsg('登録が完了しました。利用規約に同意してログインしてください。', '#4ade80');
+          }
+        } catch (err) {
+          showMsg('通信エラー: ' + (err.message || err), '#f87171');
+        } finally {
+          signupBtn.disabled = false;
+          signupBtn.textContent = '新規登録';
         }
       });
-      msgObserver.observe(authMessage, { childList: true, characterData: true, subtree: true });
 
-      // 未ログイン時はロビー・マイページへの移動をブロック
+      // ログアウト
+      logoutBtn.addEventListener('click', async function() {
+        const sb = getSb();
+        if (sb && sb.auth) {
+          await sb.auth.signOut();
+        }
+        userGreeting.textContent = 'ゲストモード';
+        logoutBtn.classList.add('hidden');
+        authToggleBtn.classList.remove('hidden');
+        lobbyView.classList.add('hidden');
+        profileView.classList.add('hidden');
+        aboutView.classList.add('hidden');
+        setAuthMode('login');
+        authView.classList.remove('hidden');
+      });
+
+      // 未ログイン時のナビゲーション保護
       navBtns.forEach(btn => {
         btn.addEventListener('click', function(e) {
           const targetView = this.dataset.view;
-          if (targetView !== 'about' && !isUserLoggedIn()) {
+          if (targetView !== 'about' && !isLoggedIn()) {
             e.stopImmediatePropagation();
             lobbyView.classList.add('hidden');
             profileView.classList.add('hidden');
             aboutView.classList.add('hidden');
             authView.classList.remove('hidden');
+            showMsg('ゲームをプレイするにはログインしてください。', '#fbbf24');
           }
         }, true);
       });
